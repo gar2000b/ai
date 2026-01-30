@@ -1,3 +1,6 @@
+import constants.ansi as ansi
+
+
 class Book:
     title: str
     author: str
@@ -10,4 +13,8 @@ class Book:
         return bool(self.author)
 
     def get_description(self) -> str:
-        return f"'{self.title}' by {self.author} in {self.file_format} format"
+        return (
+            f"'{ansi.BOLD}{ansi.MAGENTA}{self.title}{ansi.RESET}' "
+            f"{ansi.DIM}by{ansi.RESET} {ansi.CYAN}{self.author}{ansi.RESET} "
+            f"{ansi.DIM}in {ansi.RESET}{ansi.GREEN}Book{ansi.RESET}{ansi.DIM} format{ansi.RESET}"
+        )

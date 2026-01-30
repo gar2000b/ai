@@ -1,9 +1,8 @@
 from .book import Book
-from .ebook import Ebook
 
 class Bookshelf:
 
-    books: list[Book | Ebook]
+    books: list[Book]
 
     def __init__(self, books=None):
         self.books = books or []
@@ -14,8 +13,4 @@ class Bookshelf:
     def get_book_details(self):
         for book in self.books:
             if book.author:
-                yield (
-                    book.title,
-                    book.author,
-                    getattr(book, "file_format", "Book"),
-                )
+                yield book.get_description()
