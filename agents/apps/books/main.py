@@ -1,6 +1,6 @@
 import os
 import sys
-from model import Book, Bookshelf
+from model import Book, Bookshelf, Ebook
 import constants.ansi as ansi
 
 def clear_screen():
@@ -37,8 +37,10 @@ def main():
     book2 = Book("Bleak House", "Charles Dickens")
     book3 = Book("An Book By No Author")
     book4 = Book("Moby Dick", "Herman Melville")
+    ebook1 = Ebook("Great Expectations", "Charles Dickens", "PDF")
+    ebook2 = Ebook("Bleak House", "Charles Dickens", "PDF")
 
-    books = [book1, book2, book3, book4]
+    books = [book1, book2, book3, book4, ebook1, ebook2]
 
     # create bookshelf
     shelf = Bookshelf(books)
@@ -50,8 +52,13 @@ def main():
     # iterate books (raw ANSI so Git Bash shows colors)
     # flush=True so output appears immediately in Git Bash (avoids buffering)
     print(f"{ansi.BOLD}{ansi.YELLOW}Books on shelf:{ansi.RESET}\n", flush=True)
-    for title, author in shelf.get_book_details():
-        print(f"• {ansi.BOLD}{ansi.MAGENTA}{title}{ansi.RESET} {ansi.DIM}by{ansi.RESET} {ansi.CYAN}{author}{ansi.RESET}", flush=True)
+    for title, author, file_format in shelf.get_book_details():
+        print(
+            f"• {ansi.BOLD}{ansi.MAGENTA}{title}{ansi.RESET} "
+            f"{ansi.DIM}by{ansi.RESET} {ansi.CYAN}{author}{ansi.RESET} "
+            f"{ansi.DIM}in format:{ansi.RESET} {ansi.GREEN}{file_format}{ansi.RESET}",
+            flush=True,
+        )
 
     print(f"\n{ansi.DIM}Press any key to exit...{ansi.RESET}", flush=True)
     wait_key()
