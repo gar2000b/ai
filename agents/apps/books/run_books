@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Run the books app with python3 or python (for Windows Git Bash / Linux / macOS)
+dir="$(dirname "$0")"
+if command -v python3 &>/dev/null; then
+  exec python3 "$dir/main.py" "$@"
+else
+  exec python "$dir/main.py" "$@"
+fi

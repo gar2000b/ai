@@ -2,8 +2,12 @@
 
 import os
 
+bool_use_emoji = True
+
 def terminal_likely_supports_emoji() -> bool:
     """Guess if the terminal can render emoji (Cursor, VS Code, Windows Terminal, modern xterm)."""
+    if not bool_use_emoji:
+        return False
     env = os.environ
     explicit = env.get("BOOKS_USE_EMOJI", "").strip().lower()
     if explicit in ("0", "false", "no"):
@@ -21,4 +25,7 @@ def terminal_likely_supports_emoji() -> bool:
         return True
     return False
 
-BOOK_MARKER = "📚" if terminal_likely_supports_emoji() else "•"
+
+def get_book_marker() -> str:
+    """Return 📚 if emoji are enabled and supported, else •."""
+    return "📚" if terminal_likely_supports_emoji() else "•"
