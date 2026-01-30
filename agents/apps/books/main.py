@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """Books app: displays a shelf of books and ebooks with ANSI-colored output."""
 
 import argparse
