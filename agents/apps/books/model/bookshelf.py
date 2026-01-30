@@ -13,5 +13,5 @@ class Bookshelf:
     def get_book_details(self):
         for book in self.books:
             if book.author:
-                sleep(0.5)
+                sleep(0.2)
                 yield (book.title, book.author)
