@@ -1,17 +1,20 @@
+"""Books app: displays a shelf of books and ebooks with ANSI-colored output."""
+
 import os
 import sys
 from model import Book, Bookshelf, Ebook
 import constants.ansi as ansi
+from utils.emoji import BOOK_MARKER
+
 
 def clear_screen():
-    # Git Bash on Windows uses Unix "clear"; cmd/PowerShell use "cls"
+    """Clear the terminal (uses 'clear' on Unix/Git Bash, 'cls' on cmd/PowerShell)."""
     if sys.platform != "win32":
         os.system("clear")
     elif os.environ.get("TERM") or os.environ.get("MSYSTEM"):
         os.system("clear")  # Git Bash / MSYS
     else:
         os.system("cls")
-
 
 def wait_key():
     """Wait for a keypress (any key on Windows, Enter elsewhere)."""
@@ -26,6 +29,7 @@ def wait_key():
 
 
 def main():
+    """Run the app: clear screen, show books on shelf with colored descriptions, then wait for key and clear again."""
     # Emit UTF-8 so Unicode (bullet •, etc.) renders in Git Bash
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
@@ -53,7 +57,7 @@ def main():
     # flush=True so output appears immediately in Git Bash (avoids buffering)
     print(f"{ansi.BOLD}{ansi.YELLOW}Books on shelf:{ansi.RESET}\n", flush=True)
     for description in shelf.get_book_details():
-        print(f"• {description}", flush=True)
+        print(f"{BOOK_MARKER} {description}", flush=True)
 
     print(f"\n{ansi.DIM}Press any key to exit...{ansi.RESET}", flush=True)
     wait_key()
