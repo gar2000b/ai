@@ -1,0 +1,4 @@
+# num_images height width "prompt_detail"
+2 640 400 "classic retro arcade"
+1 512 512 "a sexy female warrior like red sonya"
+1 640 400 "batman"

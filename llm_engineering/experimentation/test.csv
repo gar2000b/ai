@@ -1,0 +1,11 @@
+Date,Transaction_ID,Account_Name,Category,Revenue,Expenses,Net_Income,Department,Description,Status
+2024-01-15,TXN-001,Sales Revenue,Revenue,125000.00,0.00,125000.00,Sales,Q1 Product Sales,Completed
+2024-01-22,TXN-002,Marketing Expenses,Operating Expenses,0.00,15000.00,-15000.00,Marketing,Digital Advertising Campaign,Completed
+2024-02-05,TXN-003,Service Revenue,Revenue,85000.50,0.00,85000.50,Services,Consulting Services Q1,Completed
+2024-02-12,TXN-004,Salaries & Wages,Operating Expenses,0.00,95000.00,-95000.00,HR,Monthly Payroll,Completed
+2024-02-28,TXN-005,Product Sales,Revenue,210000.75,0.00,210000.75,Sales,Enterprise License Sales,Completed
+2024-03-10,TXN-006,Office Rent,Operating Expenses,0.00,12000.00,-12000.00,Operations,Monthly Office Lease,Completed
+2024-03-18,TXN-007,Interest Income,Other Income,2500.00,0.00,2500.00,Finance,Bank Interest Payment,Completed
+2024-03-25,TXN-008,Utilities,Operating Expenses,0.00,3500.50,-3500.50,Operations,Monthly Utilities Bill,Completed
+2024-04-02,TXN-009,Subscription Revenue,Revenue,45000.25,0.00,45000.25,Sales,Monthly Recurring Revenue,Completed
+2024-04-15,TXN-010,Software Licenses,Operating Expenses,0.00,8500.00,-8500.00,IT,Annual Software Subscriptions,Completed
