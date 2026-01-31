@@ -34,6 +34,45 @@ fields = {
 book = Book(**fields)
 print(f"{book}\n")
 
+# Pydantic to JSON
 json_str = json.dumps(book.model_dump(), indent=2)
+Console().print(Syntax(json_str, "json", theme="monokai", background_color="default"))
+print()
+
+# JSON to Pydantic
+json_string = '{"title": "Frankenstein", "author": "Mary Shelley", "pages": 280}'
+data = json.loads(json_string)
+book = Book(**data)
+print(f"{book}\n")
+
+# Nested Pydantic
+class Author(BaseModel):
+    name: str
+    birth_year: int
+
+class Book(BaseModel):
+    title: str
+    author: Author
+    pages: int
+
+a = Author(name="Isaac Asimov", birth_year=1920)
+b = Book(title="Foundation", author=a, pages=255)
+print(f"{b}\n")
+
+# Nested Pydantic with dicts
+data = {
+    "title": "Neuromancer",
+    "author": {
+        "name": "William Gibson",
+        "birth_year": 1948
+    },
+    "pages": 271
+}
+
+b = Book(**data)
+print(f"{b}\n")
+
+# Pydantic to JSON
+json_str = json.dumps(b.model_dump(), indent=2)
 Console().print(Syntax(json_str, "json", theme="monokai", background_color="default"))
 print()
