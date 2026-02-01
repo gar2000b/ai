@@ -34,6 +34,12 @@ def print_welcome():
     print_help()
 
 
+def print_goodbye():
+    """Print the goodbye message (used for exit command and Ctrl+C)."""
+    print(f"\n{ansi.DIM}Thanks for using the AI Discovery Agent.{ansi.RESET}")
+    print(f"{ansi.BOLD}{ansi.MAGENTA}Goodbye!{ansi.RESET}\n")
+
+
 def agent_loop():
     """Run the main command loop until the user exits."""
     while True:
@@ -44,8 +50,7 @@ def agent_loop():
         if command == "help":
             print_help()
         elif command == "exit":
-            print(f"\n{ansi.DIM}Thanks for using the AI Discovery Agent.{ansi.RESET}")
-            print(f"{ansi.BOLD}{ansi.MAGENTA}Goodbye!{ansi.RESET}\n")
+            print_goodbye()
             break
         elif command == "clear" or command == "cls":
             clear_screen()
@@ -67,7 +72,10 @@ def main():
     """Entry point: clear screen, show welcome, run agent loop."""
     clear_screen()
     print_welcome()
-    agent_loop()
+    try:
+        agent_loop()
+    except KeyboardInterrupt:
+        print_goodbye()
 
 
 if __name__ == "__main__":
