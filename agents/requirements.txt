@@ -48,7 +48,7 @@ autogen-core==0.6.1
     #   autogen-ext
 autogen-ext==0.6.1
     # via agents (pyproject.toml)
-av==14.4.0
+av==14.2.0
     # via aiortc
 azure-ai-agents==1.0.1
     # via
