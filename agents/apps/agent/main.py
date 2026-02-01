@@ -5,6 +5,7 @@ import constants.ansi as ansi
 import os
 import sys
 import json
+import utils.emoji as emoji_module
 from prompt_toolkit import PromptSession
 from prompt_toolkit.application.run_in_terminal import run_in_terminal
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
@@ -23,23 +24,33 @@ session = PromptSession(style=prompt_style)
 # Ctrl+L clears the screen (like clear / cls command)
 key_bindings = KeyBindings()
 
+
 @key_bindings.add("c-l")
 def _clear_screen(_event):
     # Same clear_screen() as clear/cls; run_in_terminal so prompt redraws after
     run_in_terminal(clear_screen)
 
+
 def print_help():
     """Print the help message with available commands."""
-    print(f"\n{ansi.DIM}help - Show this help message{ansi.RESET}")
-    print(f"{ansi.DIM}exit - Exit the agent{ansi.RESET}")
-    print(f"{ansi.DIM}clear - Clear the screen{ansi.RESET}")
-    print(f"{ansi.DIM}exit - Exit the agent{ansi.RESET}\n")
+    commands = [
+        ("help", "Show this help message"),
+        ("clear", "Clear the screen"),
+        ("exit", "Exit the agent"),
+    ]
+    width = max(len(cmd) for cmd, _ in commands)
+    print()
+    for cmd, desc in commands:
+        print(f"{ansi.DIM}{cmd:<{width}} - {desc}{ansi.RESET}")
+    print()
 
 
 def print_welcome():
     """Print the welcome message and command list."""
     print(f"{ansi.BOLD}{ansi.MAGENTA}Welcome to the AI Discovery Agent!{ansi.RESET}\n")
-    print(f"{ansi.DIM}{ansi.RESET}{ansi.CYAN}This is an AI agent that will help you find better code for discovery jobs.{ansi.RESET}\n")
+    print(
+        f"{ansi.DIM}{ansi.RESET}{ansi.CYAN}This is an AI agent that will help you explore new code for discovery jobs.{ansi.RESET}\n"
+    )
     print(f"{ansi.DIM}You can use the following commands:{ansi.RESET}")
     print_help()
 
@@ -72,7 +83,8 @@ def _parse_args():
         description="AI Discovery Agent with command history and ANSI-colored output.",
     )
     parser.add_argument(
-        "-de", "--disable-emojis",
+        "-de",
+        "--disable-emojis",
         action="store_true",
         help="For example: uses a bullet (•) instead of emoji for list items.",
     )
@@ -92,6 +104,5 @@ def main():
 if __name__ == "__main__":
     args = _parse_args()
     if args.disable_emojis:
-        import utils.emoji as emoji_module
         emoji_module.bool_use_emoji = False
     main()
