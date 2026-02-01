@@ -36,6 +36,7 @@ def print_help():
     commands = [
         ("help", "Show this help message"),
         ("clear", "Clear the screen"),
+        ("work", "lists the contents of the current work directory (in ASCII tree format)"),
         ("exit", "Exit the agent"),
     ]
     width = max(len(cmd) for cmd, _ in commands)
@@ -55,11 +56,44 @@ def print_welcome():
     print_help()
 
 
+
 def print_goodbye():
     """Print the goodbye message (used for exit command and Ctrl+C)."""
     print(f"\n{ansi.DIM}Thanks for using the AI Discovery Agent.{ansi.RESET}")
     print(f"{ansi.BOLD}{ansi.MAGENTA}Goodbye!{ansi.RESET}\n")
 
+def _tree_lines(root_path, prefix=""):
+    """Yield (display_name, line_prefix) for each entry in an ASCII tree."""
+    try:
+        entries = []
+        for name in os.listdir(root_path):
+            path = os.path.join(root_path, name)
+            entries.append((name, path, os.path.isdir(path)))
+        entries.sort(key=lambda x: (not x[2], x[0].lower()))
+    except OSError:
+        return
+    for i, (name, path, is_dir) in enumerate(entries):
+        is_last = i == len(entries) - 1
+        connector = "└── " if is_last else "├── "
+        yield name + ("/" if is_dir else ""), prefix + connector
+        if is_dir:
+            extension = "    " if is_last else "│   "
+            yield from _tree_lines(path, prefix + extension)
+
+
+def print_work_directory():
+    """Print the contents of the current work directory (in ASCII tree format)."""
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    work_dir = os.path.join(base_dir, "work")
+    print(f"\n{ansi.DIM}Contents of the current work directory:\n{ansi.RESET}")
+    if not os.path.isdir(work_dir):
+        print(f"{ansi.DIM}(work directory not found){ansi.RESET}\n")
+        return
+    work_name = os.path.basename(work_dir.rstrip(os.sep)) or "work"
+    print(f"{ansi.BOLD}{work_name}/{ansi.RESET}")
+    for name, line_prefix in _tree_lines(work_dir):
+        print(f"{ansi.DIM}{line_prefix}{ansi.RESET}{name}")
+    print()
 
 def agent_loop():
     """Run the main command loop until the user exits."""
@@ -71,6 +105,8 @@ def agent_loop():
         )
         if command == "help":
             print_help()
+        elif command == "work":
+            print_work_directory()
         elif command == "exit":
             print_goodbye()
             break
