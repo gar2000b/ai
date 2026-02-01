@@ -1,12 +1,9 @@
-#!/usr/bin/env python3
 """Books app: displays a shelf of books and ebooks with ANSI-colored output."""
 
-import argparse
 import os
 import sys
 from model import Book, Bookshelf, Ebook
 import constants.ansi as ansi
-from utils.emoji import get_book_marker
 
 
 def clear_screen():
@@ -17,6 +14,7 @@ def clear_screen():
         os.system("clear")  # Git Bash / MSYS
     else:
         os.system("cls")
+
 
 def wait_key():
     """Wait for a keypress (any key on Windows, Enter elsewhere)."""
@@ -36,7 +34,6 @@ def main():
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
 
-    book_marker = get_book_marker()
     clear_screen()
 
     # create Book instances (not dicts)
@@ -60,27 +57,11 @@ def main():
     # flush=True so output appears immediately in Git Bash (avoids buffering)
     print(f"{ansi.BOLD}{ansi.YELLOW}Books on shelf:{ansi.RESET}\n", flush=True)
     for description in shelf.get_book_details():
-        print(f"{book_marker} {description}", flush=True)
+        print(f"• {description}", flush=True)
 
     print(f"\n{ansi.DIM}Press any key to exit...{ansi.RESET}", flush=True)
     wait_key()
     clear_screen()
 
-def _parse_args():
-    parser = argparse.ArgumentParser(
-        description="Display a shelf of books and ebooks with ANSI-colored output.",
-    )
-    parser.add_argument(
-        "-de", "--disable-emojis",
-        action="store_true",
-        help="For example: uses a bullet (•) instead of the book emoji (📚) for list items.",
-    )
-    return parser.parse_args()
-
-
 if __name__ == "__main__":
-    args = _parse_args()
-    if args.disable_emojis:
-        import utils.emoji as emoji_module
-        emoji_module.bool_use_emoji = False
     main()
