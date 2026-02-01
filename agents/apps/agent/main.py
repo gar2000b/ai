@@ -6,6 +6,7 @@ import os
 import sys
 import json
 from prompt_toolkit import PromptSession
+from prompt_toolkit.application.run_in_terminal import run_in_terminal
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.styles import Style
@@ -24,7 +25,8 @@ key_bindings = KeyBindings()
 
 @key_bindings.add("c-l")
 def _clear_screen(_event):
-    clear_screen()  # same as clear / cls command
+    # Same clear_screen() as clear/cls; run_in_terminal so prompt redraws after
+    run_in_terminal(clear_screen)
 
 def print_help():
     """Print the help message with available commands."""
