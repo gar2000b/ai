@@ -7,6 +7,7 @@ import sys
 import json
 from prompt_toolkit import PromptSession
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
+from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.styles import Style
 from utils.emoji import get_book_marker
 from utils.screen import clear_screen, wait_key
@@ -17,6 +18,13 @@ from rich.syntax import Syntax
 # Use prompt_toolkit styling for the prompt (ANSI codes are not interpreted inside session.prompt)
 prompt_style = Style.from_dict({"prompt": "bold ansimagenta"})
 session = PromptSession(style=prompt_style)
+
+# Ctrl+L clears the screen (like clear / cls command)
+key_bindings = KeyBindings()
+
+@key_bindings.add("c-l")
+def _clear_screen(_event):
+    clear_screen()  # same as clear / cls command
 
 def print_help():
     """Print the help message with available commands."""
@@ -46,6 +54,7 @@ def agent_loop():
         command = session.prompt(
             [("class:prompt", "Ask anything or Enter a command: ")],
             auto_suggest=AutoSuggestFromHistory(),
+            key_bindings=key_bindings,
         )
         if command == "help":
             print_help()
