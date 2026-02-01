@@ -9,6 +9,7 @@ import utils.emoji as emoji_module
 from prompt_toolkit import PromptSession
 from prompt_toolkit.application.run_in_terminal import run_in_terminal
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
+from prompt_toolkit.history import FileHistory
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.styles import Style
 from utils.emoji import get_book_marker
@@ -16,10 +17,12 @@ from utils.screen import clear_screen, wait_key
 from rich.console import Console
 from rich.syntax import Syntax
 
-# In-memory command history (up/down arrows)
+# Command history: persisted to file so up/down arrows work across sessions
 # Use prompt_toolkit styling for the prompt (ANSI codes are not interpreted inside session.prompt)
+_agent_dir = os.path.dirname(os.path.abspath(__file__))
+_history_file = os.path.join(_agent_dir, ".agent_history")
 prompt_style = Style.from_dict({"prompt": "bold ansimagenta"})
-session = PromptSession(style=prompt_style)
+session = PromptSession(style=prompt_style, history=FileHistory(_history_file))
 
 # Ctrl+L clears the screen (like clear / cls command)
 key_bindings = KeyBindings()
