@@ -23,11 +23,30 @@ from rich.syntax import Syntax
 # Set process name shown by top/htop/btop (Linux only)
 if sys.platform.startswith("linux"):
     try:
+        import ctypes
+
         libc = ctypes.CDLL(None)
         PR_SET_NAME = 15
-        libc.prctl(PR_SET_NAME, b"ai_code", 0, 0, 0)
-    except (OSError, TypeError):
-        pass  # prctl not available or failed
+
+        # Tell ctypes the real signature so the pointer is passed correctly
+        libc.prctl.argtypes = [
+            ctypes.c_int,      # option
+            ctypes.c_char_p,   # arg2 (name)
+            ctypes.c_ulong,    # arg3
+            ctypes.c_ulong,    # arg4
+            ctypes.c_ulong,    # arg5
+        ]
+        libc.prctl.restype = ctypes.c_int
+
+        name = b"ai_code"  # <= 15 bytes
+        libc.prctl(PR_SET_NAME, name, 0, 0, 0)
+
+        # Extra reliable: also set /proc/self/comm directly
+        with open("/proc/self/comm", "wb", buffering=0) as f:
+            f.write(name + b"\n")
+
+    except Exception:
+        pass
 
 # Command history: persisted to file so up/down arrows work across sessions
 # Use prompt_toolkit styling for the prompt (ANSI codes are not interpreted inside session.prompt)
