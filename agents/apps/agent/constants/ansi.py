@@ -28,6 +28,9 @@ BLUE = "\033[34m"
 # CYAN = "\033[36m"  (already above)
 WHITE = "\033[37m"
 
+# --- Extended colors (256-color palette) ---
+ORANGE = "\033[38;5;216m"  # xterm 216 = light orange / salmon
+
 # --- Foreground colors (bright) ---
 BRIGHT_BLACK = "\033[90m"   # Gray
 BRIGHT_RED = "\033[91m"

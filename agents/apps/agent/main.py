@@ -2,12 +2,12 @@
 
 import argparse
 import constants.ansi as ansi
-import ctypes
 import os
 import subprocess
 import sys
 import json
 import utils.emoji as emoji_module
+from platform_utils import set_process_name
 from prompt_toolkit import PromptSession
 from prompt_toolkit.application.run_in_terminal import run_in_terminal
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
@@ -19,40 +19,13 @@ from utils.screen import clear_screen, wait_key
 from rich.console import Console
 from rich.syntax import Syntax
 
-
-# Set process name shown by top/htop/btop (Linux only)
-if sys.platform.startswith("linux"):
-    try:
-        import ctypes
-
-        libc = ctypes.CDLL(None)
-        PR_SET_NAME = 15
-
-        # Tell ctypes the real signature so the pointer is passed correctly
-        libc.prctl.argtypes = [
-            ctypes.c_int,      # option
-            ctypes.c_char_p,   # arg2 (name)
-            ctypes.c_ulong,    # arg3
-            ctypes.c_ulong,    # arg4
-            ctypes.c_ulong,    # arg5
-        ]
-        libc.prctl.restype = ctypes.c_int
-
-        name = b"ai_code"  # <= 15 bytes
-        libc.prctl(PR_SET_NAME, name, 0, 0, 0)
-
-        # Extra reliable: also set /proc/self/comm directly
-        with open("/proc/self/comm", "wb", buffering=0) as f:
-            f.write(name + b"\n")
-
-    except Exception:
-        pass
+set_process_name()
 
 # Command history: persisted to file so up/down arrows work across sessions
 # Use prompt_toolkit styling for the prompt (ANSI codes are not interpreted inside session.prompt)
 _agent_dir = os.path.dirname(os.path.abspath(__file__))
 _history_file = os.path.join(_agent_dir, ".agent_history")
-prompt_style = Style.from_dict({"prompt": "bold ansimagenta"})
+prompt_style = Style.from_dict({"prompt": "ansicyan"})
 session = PromptSession(style=prompt_style, history=FileHistory(_history_file))
 
 # Ctrl+L clears the screen (like clear / cls command)
@@ -72,8 +45,10 @@ def print_help():
         ("clear", "Clear the screen"),
         (
             "work",
-            "lists the contents of the current work directory (in ASCII tree format)",
+            "Lists the contents of the current work directory (in ASCII tree format)",
         ),
+        ("reset", "Clear the screen and show the welcome page again"),
+        ("!cmd", "Run an OS command (e.g. !pwd, !ls -hal)"),
         ("exit", "Exit the agent"),
     ]
     width = max(len(cmd) for cmd, _ in commands)
@@ -85,9 +60,26 @@ def print_help():
 
 def print_welcome():
     """Print the welcome message and command list."""
-    print(f"{ansi.BOLD}{ansi.MAGENTA}Welcome to the AI Discovery Agent!{ansi.RESET}\n")
+    welcome_text = " Welcome to AI Code (the discovery agent) "
+    width = len(welcome_text)
+    styled_text = f"{ansi.RESET}{ansi.RED} Welcome to {ansi.BOLD}AI Code{ansi.RESET}{ansi.RED} (the discovery agent) {ansi.BOLD}"
+    border_top = f"{ansi.BOLD}{ansi.RED}╭{'─' * width}╮{ansi.RESET}"
+    border_mid = f"{ansi.BOLD}{ansi.RED}│{styled_text}│{ansi.RESET}"
+    border_bot = f"{ansi.BOLD}{ansi.RED}╰{'─' * width}╯{ansi.RESET}"
+    print(f"\n{border_top}\n{border_mid}\n{border_bot}")
+
+    logo = """
+ █████╗ ██╗     ██████╗ ██████╗ ██████╗ ███████╗
+██╔══██╗██║    ██╔════╝██╔═══██╗██╔══██╗██╔════╝
+███████║██║    ██║     ██║   ██║██║  ██║█████╗  
+██╔══██║██║    ██║     ██║   ██║██║  ██║██╔══╝  
+██║  ██║██║    ╚██████╗╚██████╔╝██████╔╝███████╗
+╚═╝  ╚═╝╚═╝     ╚═════╝ ╚═════╝ ╚═════╝ ╚══════╝
+"""
+    print(f"{ansi.BOLD}{ansi.RED}{logo}{ansi.RESET}")
+
     print(
-        f"{ansi.DIM}{ansi.RESET}{ansi.CYAN}This is an AI agent that will help you explore new code for discovery jobs.{ansi.RESET}\n"
+        f"{ansi.DIM}{ansi.RESET}{ansi.CYAN}This is a terminal-based AI agent that will help you explore new code for discovery.{ansi.RESET}\n"
     )
     print(f"{ansi.DIM}You can use the following commands:{ansi.RESET}")
     print_help()
@@ -96,7 +88,7 @@ def print_welcome():
 def print_goodbye():
     """Print the goodbye message (used for exit command and Ctrl+C)."""
     print(f"\n{ansi.DIM}Thanks for using the AI Discovery Agent.{ansi.RESET}")
-    print(f"{ansi.BOLD}{ansi.MAGENTA}Goodbye!{ansi.RESET}\n")
+    print(f"{ansi.BOLD}{ansi.RED}Goodbye!{ansi.RESET}\n")
 
 
 def _tree_lines(root_path, prefix=""):
@@ -231,6 +223,9 @@ def agent_loop():
             break
         elif command == "clear" or command == "cls":
             clear_screen()
+        elif command == "reset":
+            clear_screen()
+            print_welcome()
         elif command.startswith("!"):
             _run_os_command(command[1:].strip())
         else:
