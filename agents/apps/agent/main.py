@@ -2,6 +2,7 @@
 
 import argparse
 import constants.ansi as ansi
+import ctypes
 import os
 import subprocess
 import sys
@@ -17,6 +18,16 @@ from utils.emoji import get_book_marker
 from utils.screen import clear_screen, wait_key
 from rich.console import Console
 from rich.syntax import Syntax
+
+
+# Set process name shown by top/htop/btop (Linux only)
+if sys.platform.startswith("linux"):
+    try:
+        libc = ctypes.CDLL(None)
+        PR_SET_NAME = 15
+        libc.prctl(PR_SET_NAME, b"ai_code", 0, 0, 0)
+    except (OSError, TypeError):
+        pass  # prctl not available or failed
 
 # Command history: persisted to file so up/down arrows work across sessions
 # Use prompt_toolkit styling for the prompt (ANSI codes are not interpreted inside session.prompt)
