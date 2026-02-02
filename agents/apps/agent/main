@@ -1,2 +1,10 @@
 #!/usr/bin/env bash
-exec python3 "$(dirname "$0")/main.py" "$@"
+source ../../.venv/bin/activate
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+cd "$SCRIPT_DIR/work" || exit 1
+exec python3 "$SCRIPT_DIR/main.py" "$@"
+
+deactivate
+
