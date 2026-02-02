@@ -3,6 +3,7 @@
 import argparse
 import constants.ansi as ansi
 import os
+import subprocess
 import sys
 import json
 import utils.emoji as emoji_module
@@ -98,6 +99,27 @@ def print_work_directory():
         print(f"{ansi.DIM}{line_prefix}{ansi.RESET}{name}")
     print()
 
+def _run_os_command(cmd: str) -> None:
+    """Run a shell command and print stdout/stderr to the screen."""
+    if not cmd:
+        return
+    try:
+        result = subprocess.run(
+            cmd,
+            shell=True,
+            capture_output=True,
+            text=True,
+        )
+        if result.stdout:
+            print(result.stdout, end="" if result.stdout.endswith("\n") else "\n")
+        if result.stderr:
+            print(result.stderr, end="" if result.stderr.endswith("\n") else "\n")
+        if result.returncode != 0 and not result.stderr:
+            print(f"{ansi.DIM}(exit code {result.returncode}){ansi.RESET}")
+    except Exception as e:
+        print(f"{ansi.DIM}Error: {e}{ansi.RESET}")
+
+
 def agent_loop():
     """Run the main command loop until the user exits."""
     while True:
@@ -115,6 +137,11 @@ def agent_loop():
             break
         elif command == "clear" or command == "cls":
             clear_screen()
+        elif command.startswith("!"):
+            _run_os_command(command[1:].strip())
+        else:
+            # Unknown command or free-form input (could be a question for the agent later)
+            pass
 
 
 def _parse_args():
