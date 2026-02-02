@@ -99,10 +99,36 @@ def print_work_directory():
         print(f"{ansi.DIM}{line_prefix}{ansi.RESET}{name}")
     print()
 
+# Map file extension -> Pygments lexer name for syntax-highlighted cat/type output
+_EXTENSION_LEXER = {
+    ".py": "python", ".pyw": "python",
+    ".json": "json", ".js": "javascript", ".mjs": "javascript", ".ts": "typescript",
+    ".html": "html", ".htm": "html", ".css": "css", ".scss": "scss",
+    ".md": "markdown", ".yaml": "yaml", ".yml": "yaml", ".xml": "xml",
+    ".sh": "bash", ".bash": "bash", ".bat": "batch", ".ps1": "powershell",
+    ".rb": "ruby", ".go": "go", ".rs": "rust", ".java": "java",
+    ".c": "c", ".h": "c", ".cpp": "cpp", ".hpp": "cpp", ".cc": "cpp",
+    ".sql": "sql", ".r": "r", ".R": "r",
+}
+
+
+def _lexer_for_display_command(cmd: str) -> str | None:
+    """If cmd is cat/type with a file path, return Pygments lexer name from extension; else None."""
+    parts = cmd.strip().split()
+    if not parts or parts[0].lower() not in ("cat", "type"):
+        return None
+    for part in parts[1:]:
+        if not part.startswith("-"):
+            ext = os.path.splitext(part)[1].lower()
+            return _EXTENSION_LEXER.get(ext, "text")
+    return "text"
+
+
 def _run_os_command(cmd: str) -> None:
     """Run a shell command and print stdout/stderr to the screen."""
     if not cmd:
         return
+    print()
     try:
         result = subprocess.run(
             cmd,
@@ -111,13 +137,20 @@ def _run_os_command(cmd: str) -> None:
             text=True,
         )
         if result.stdout:
-            print(result.stdout, end="" if result.stdout.endswith("\n") else "\n")
+            lexer = _lexer_for_display_command(cmd)
+            if lexer is not None:
+                Console().print(
+                    Syntax(result.stdout.rstrip(), lexer, theme="monokai", background_color="default")
+                )
+            else:
+                print(result.stdout, end="" if result.stdout.endswith("\n") else "\n")
         if result.stderr:
             print(result.stderr, end="" if result.stderr.endswith("\n") else "\n")
         if result.returncode != 0 and not result.stderr:
             print(f"{ansi.DIM}(exit code {result.returncode}){ansi.RESET}")
     except Exception as e:
         print(f"{ansi.DIM}Error: {e}{ansi.RESET}")
+    print()
 
 
 def agent_loop():
