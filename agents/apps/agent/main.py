@@ -40,7 +40,10 @@ def print_help():
     commands = [
         ("help", "Show this help message"),
         ("clear", "Clear the screen"),
-        ("work", "lists the contents of the current work directory (in ASCII tree format)"),
+        (
+            "work",
+            "lists the contents of the current work directory (in ASCII tree format)",
+        ),
         ("exit", "Exit the agent"),
     ]
     width = max(len(cmd) for cmd, _ in commands)
@@ -60,11 +63,11 @@ def print_welcome():
     print_help()
 
 
-
 def print_goodbye():
     """Print the goodbye message (used for exit command and Ctrl+C)."""
     print(f"\n{ansi.DIM}Thanks for using the AI Discovery Agent.{ansi.RESET}")
     print(f"{ansi.BOLD}{ansi.MAGENTA}Goodbye!{ansi.RESET}\n")
+
 
 def _tree_lines(root_path, prefix=""):
     """Yield (display_name, line_prefix) for each entry in an ASCII tree."""
@@ -99,16 +102,39 @@ def print_work_directory():
         print(f"{ansi.DIM}{line_prefix}{ansi.RESET}{name}")
     print()
 
+
 # Map file extension -> Pygments lexer name for syntax-highlighted cat/type output
 _EXTENSION_LEXER = {
-    ".py": "python", ".pyw": "python",
-    ".json": "json", ".js": "javascript", ".mjs": "javascript", ".ts": "typescript",
-    ".html": "html", ".htm": "html", ".css": "css", ".scss": "scss",
-    ".md": "markdown", ".yaml": "yaml", ".yml": "yaml", ".xml": "xml",
-    ".sh": "bash", ".bash": "bash", ".bat": "batch", ".ps1": "powershell",
-    ".rb": "ruby", ".go": "go", ".rs": "rust", ".java": "java",
-    ".c": "c", ".h": "c", ".cpp": "cpp", ".hpp": "cpp", ".cc": "cpp",
-    ".sql": "sql", ".r": "r", ".R": "r",
+    ".py": "python",
+    ".pyw": "python",
+    ".json": "json",
+    ".js": "javascript",
+    ".mjs": "javascript",
+    ".ts": "typescript",
+    ".html": "html",
+    ".htm": "html",
+    ".css": "css",
+    ".scss": "scss",
+    ".md": "markdown",
+    ".yaml": "yaml",
+    ".yml": "yaml",
+    ".xml": "xml",
+    ".sh": "bash",
+    ".bash": "bash",
+    ".bat": "batch",
+    ".ps1": "powershell",
+    ".rb": "ruby",
+    ".go": "go",
+    ".rs": "rust",
+    ".java": "java",
+    ".c": "c",
+    ".h": "c",
+    ".cpp": "cpp",
+    ".hpp": "cpp",
+    ".cc": "cpp",
+    ".sql": "sql",
+    ".r": "r",
+    ".R": "r",
 }
 
 
@@ -140,7 +166,12 @@ def _run_os_command(cmd: str) -> None:
             lexer = _lexer_for_display_command(cmd)
             if lexer is not None:
                 Console().print(
-                    Syntax(result.stdout.rstrip(), lexer, theme="monokai", background_color="default")
+                    Syntax(
+                        result.stdout.rstrip(),
+                        lexer,
+                        theme="monokai",
+                        background_color="default",
+                    )
                 )
             else:
                 print(result.stdout, end="" if result.stdout.endswith("\n") else "\n")
