@@ -33,6 +33,7 @@ def main():
     print_welcome()
     agent_dir = os.path.dirname(os.path.abspath(__file__))
     env_path = os.path.join(agent_dir, ".env")
+    print(f"Env path: {env_path}")
     print(f"Loading .env file success: {load_dotenv(dotenv_path=env_path, override=True)}")
     print(f"OpenAI API Key: {os.getenv('OPENAI_API_KEY')}")
     try:
