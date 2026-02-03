@@ -81,7 +81,7 @@ def print_goodbye():
 
 def print_llm_response(prompt: str) -> None:
     """Print the LLM response line (e.g. mock 'LLM called: prompt')."""
-    print(f"LLM called: {prompt}")
+    print(f"\n{ansi.BOLD}{ansi.RED}LLM Response: {ansi.RESET}{ansi.WHITE}{prompt}{ansi.RESET}\n")
 
 
 def _tree_lines(root_path, prefix=""):
