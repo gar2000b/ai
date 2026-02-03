@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 
 import argparse
+import os
 import utils.emoji as emoji_module
 from platform_utils import set_process_name
 from agents.core import agent_loop
 from utils.screen import clear_screen, print_goodbye, print_welcome
+
+from dotenv import load_dotenv
+from openai import OpenAI
 
 set_process_name()
 
@@ -24,8 +28,11 @@ def _parse_args():
 
 def main():
     """Entry point: clear screen, show welcome, run agent loop."""
+    print("Do I get called ***")
     clear_screen()
     print_welcome()
+    print(f"Loading .env file success: {load_dotenv(override=True)}")
+    print(f"OpenAI API Key: {os.getenv('OPENAI_API_KEY')}")
     try:
         agent_loop()
     except KeyboardInterrupt:

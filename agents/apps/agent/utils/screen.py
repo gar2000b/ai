@@ -79,6 +79,11 @@ def print_goodbye():
     print(f"{ansi.BOLD}{ansi.RED}Goodbye!{ansi.RESET}\n")
 
 
+def print_llm_response(prompt: str) -> None:
+    """Print the LLM response line (e.g. mock 'LLM called: prompt')."""
+    print(f"LLM called: {prompt}")
+
+
 def _tree_lines(root_path, prefix=""):
     """Yield (display_name, line_prefix) for each entry in an ASCII tree."""
     try:

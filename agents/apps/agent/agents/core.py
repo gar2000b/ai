@@ -3,6 +3,7 @@
 from commands.command import _run_os_command
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 
+from agents.llm import llm
 from utils.bindings import key_bindings
 from utils.prompy import agent_dir, session
 from utils.screen import (
@@ -37,5 +38,5 @@ def agent_loop():
         elif command.startswith("!"):
             _run_os_command(command[1:].strip())
         else:
-            # Unknown command or free-form input (could be a question for the agent later)
-            pass
+            # Free-form input: pass through to the LLM
+            llm(command)
