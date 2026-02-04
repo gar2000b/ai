@@ -1,8 +1,11 @@
 import os
 import sys
 import time
+from io import StringIO
 
 import constants.ansi as ansi
+from rich.console import Console
+from rich.syntax import Syntax
 
 
 def clear_screen():
@@ -130,15 +133,121 @@ def print_llm_response(prompt: str) -> None:
     print(f"\n{ansi.BOLD}{ansi.RED}LLM Response: {ansi.RESET}{ansi.WHITE}{prompt}{ansi.RESET}\n")
 
 
-def print_llm_response_stream(stream, delay: float = 0.02) -> None:
-    """Consume a stream of strings and typewrite to screen with optional delay per character."""
-    print(f"\n{ansi.BOLD}{ansi.RED}LLM Response: {ansi.RESET}{ansi.WHITE}", end="", flush=True)
+# Markdown fence language -> Pygments lexer name for syntax-highlighted code blocks
+_MARKDOWN_LANG_LEXER = {
+    "python": "python",
+    "py": "python",
+    "java": "java",
+    "javascript": "javascript",
+    "js": "javascript",
+    "typescript": "typescript",
+    "ts": "typescript",
+    "html": "html",
+    "css": "css",
+    "json": "json",
+    "yaml": "yaml",
+    "yml": "yaml",
+    "xml": "xml",
+    "bash": "bash",
+    "sh": "bash",
+    "powershell": "powershell",
+    "ps1": "powershell",
+    "ruby": "ruby",
+    "rb": "ruby",
+    "go": "go",
+    "rust": "rust",
+    "rs": "rust",
+    "c": "c",
+    "cpp": "cpp",
+    "sql": "sql",
+    "r": "r",
+    "python3": "python",
+    "c++": "cpp",
+}
+
+
+def _parse_stream_for_code_blocks(stream):
+    """Yield ('text', str) or ('code', str, str) from a stream, detecting markdown fenced code blocks."""
+    buffer = ""
+    state = "normal"  # normal | code_fence | code_block
+    code_lang = "text"
+
     for chunk in stream:
         if chunk:
-            for char in chunk:
+            buffer += chunk
+
+        while buffer:
+            if state == "normal":
+                idx = buffer.find("```")
+                if idx == -1:
+                    # Emit all but last 2 chars (might be start of ```)
+                    emit_len = max(0, len(buffer) - 2)
+                    if emit_len > 0:
+                        yield ("text", buffer[:emit_len])
+                        buffer = buffer[emit_len:]
+                    break
+                yield ("text", buffer[:idx])
+                buffer = buffer[idx + 3 :]
+                state = "code_fence"  # wait for lang + newline before code_block
+
+            elif state == "code_fence":
+                # Must see newline to get language; hold back until we have it
+                newline = buffer.find("\n")
+                if newline == -1:
+                    break  # need more chunks
+                lang_part = buffer[:newline].strip().lower() or "text"
+                code_lang = _MARKDOWN_LANG_LEXER.get(lang_part, "text")
+                buffer = buffer[newline + 1 :]
+                state = "code_block"
+
+            elif state == "code_block":
+                idx = buffer.find("```")
+                if idx == -1:
+                    break  # need more chunks to find closing fence
+                yield ("code", buffer[:idx], code_lang)
+                buffer = buffer[idx + 3 :]
+                state = "normal"
+
+    if buffer and state == "code_block":
+        yield ("code", buffer, code_lang)
+    elif buffer:
+        yield ("text", buffer)
+
+
+def print_llm_response_stream(stream, delay: float = 0.02) -> None:
+    """Consume a stream; typewrite text, render markdown code blocks with syntax highlighting."""
+    print(f"\n{ansi.BOLD}{ansi.RED}LLM Response: {ansi.RESET}{ansi.WHITE}", end="", flush=True)
+    last_was_text = True
+    for segment in _parse_stream_for_code_blocks(stream):
+        if segment[0] == "text":
+            last_was_text = True
+            for char in segment[1]:
                 print(char, end="", flush=True)
                 time.sleep(delay)
-    print(f"{ansi.RESET}\n")
+        else:
+            last_was_text = False
+            _, code, lexer = segment
+            if code.strip():
+                print("\n\n", end="")
+                try:
+                    buf = StringIO()
+                    Console(file=buf, force_terminal=True).print(
+                        Syntax(
+                            code.rstrip(),
+                            lexer,
+                            theme="monokai",
+                            background_color="default",
+                        )
+                    )
+                    out = buf.getvalue().rstrip() + "\n"
+                    for char in out:
+                        print(char, end="", flush=True)
+                        time.sleep(0.001)
+                except Exception:
+                    for char in code:
+                        print(char, end="", flush=True)
+                        time.sleep(0.001)
+    print(f"{ansi.RESET}\n" if last_was_text else f"{ansi.RESET}")
 
 
 def _tree_lines(root_path, prefix=""):
