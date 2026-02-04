@@ -72,11 +72,12 @@ def print_help():
     commands = [
         ("help", "Show this help message"),
         ("clear", "Clear the screen"),
-        ("image", "Display batman.png in the terminal (Sixel; requires supported terminal)"),
+        ("image [file|path]", "Display an image (default: batman.png in images/; or full path; Sixel)"),
         (
             "work",
             "Lists the contents of the current work directory (in ASCII tree format)",
         ),
+        ("images", "Lists the contents of the images directory (in ASCII tree format)"),
         ("reset", "Clear the screen and show the welcome page again"),
         ("!cmd", "Run an OS command via the shell escape sequence bang (!) (e.g. !pwd, !ls -hal)"),
         ("exit", "Exit the agent"),
@@ -169,6 +170,20 @@ def print_work_directory(agent_dir: str):
     work_name = os.path.basename(work_dir.rstrip(os.sep)) or "work"
     print(f"{ansi.BOLD}./{work_name}/{ansi.RESET}")
     for name, line_prefix in _tree_lines(work_dir):
+        print(f"{ansi.DIM}{line_prefix}{ansi.RESET}{name}")
+    print()
+
+
+def print_images_directory(agent_dir: str):
+    """Print the contents of the images directory (in ASCII tree format)."""
+    images_dir = os.path.join(agent_dir, "images")
+    print(f"\n{ansi.DIM}Contents of the images directory:\n{ansi.RESET}")
+    if not os.path.isdir(images_dir):
+        print(f"{ansi.DIM}(images directory not found){ansi.RESET}\n")
+        return
+    dir_name = os.path.basename(images_dir.rstrip(os.sep)) or "images"
+    print(f"{ansi.BOLD}./{dir_name}/{ansi.RESET}")
+    for name, line_prefix in _tree_lines(images_dir):
         print(f"{ansi.DIM}{line_prefix}{ansi.RESET}{name}")
     print()
 

@@ -13,6 +13,7 @@ from utils.screen import (
     print_goodbye,
     print_help,
     print_image_sixel,
+    print_images_directory,
     print_welcome,
     print_work_directory,
 )
@@ -30,6 +31,8 @@ def agent_loop():
             print_help()
         elif command == "work":
             print_work_directory(agent_dir)
+        elif command == "images":
+            print_images_directory(agent_dir)
         elif command == "exit":
             print_goodbye()
             break
@@ -38,8 +41,16 @@ def agent_loop():
         elif command == "reset":
             clear_screen()
             print_welcome()
-        elif command == "image":
-            print_image_sixel(os.path.join(agent_dir, "images", "batman.png"))
+        elif command == "image" or command.startswith("image "):
+            parts = command.split(maxsplit=1)
+            arg = parts[1].strip() if len(parts) > 1 else "batman.png"
+            # Path if absolute or contains directory separators; else filename in images/
+            is_path = os.path.isabs(arg) or "/" in arg or os.sep in arg
+            image_path = os.path.abspath(arg) if is_path else os.path.join(agent_dir, "images", arg)
+            if os.path.exists(image_path):
+                print_image_sixel(image_path)
+            else:
+                print(f"Image does not exist: {image_path}")
         elif command.startswith("!"):
             _run_os_command(command[1:].strip())
         else:
