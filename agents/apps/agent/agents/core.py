@@ -30,8 +30,10 @@ def agent_loop():
         if command == "help":
             print_help()
         elif command == "work":
+            print(f"\nWork directory: {os.path.join(agent_dir, 'work')}")
             print_work_directory(agent_dir)
         elif command == "images":
+            print(f"\nImages directory: {os.path.join(agent_dir, 'images')}")
             print_images_directory(agent_dir)
         elif command == "exit":
             print_goodbye()
@@ -42,6 +44,7 @@ def agent_loop():
             clear_screen()
             print_welcome()
         elif command == "image" or command.startswith("image "):
+            print()
             parts = command.split(maxsplit=1)
             arg = parts[1].strip() if len(parts) > 1 else "batman.png"
             # Path if absolute or contains directory separators; else filename in images/
@@ -51,6 +54,7 @@ def agent_loop():
                 print_image_sixel(image_path)
             else:
                 print(f"Image does not exist: {image_path}")
+            print()
         elif command.startswith("!"):
             _run_os_command(command[1:].strip())
         else:
