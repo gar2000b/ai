@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 
 import constants.ansi as ansi
 
@@ -82,6 +83,17 @@ def print_goodbye():
 def print_llm_response(prompt: str) -> None:
     """Print the LLM response line (e.g. mock 'LLM called: prompt')."""
     print(f"\n{ansi.BOLD}{ansi.RED}LLM Response: {ansi.RESET}{ansi.WHITE}{prompt}{ansi.RESET}\n")
+
+
+def print_llm_response_stream(stream, delay: float = 0.02) -> None:
+    """Consume a stream of strings and typewrite to screen with optional delay per character."""
+    print(f"\n{ansi.BOLD}{ansi.RED}LLM Response: {ansi.RESET}{ansi.WHITE}", end="", flush=True)
+    for chunk in stream:
+        if chunk:
+            for char in chunk:
+                print(char, end="", flush=True)
+                time.sleep(delay)
+    print(f"{ansi.RESET}\n")
 
 
 def _tree_lines(root_path, prefix=""):
