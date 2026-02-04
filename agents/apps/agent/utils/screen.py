@@ -27,11 +27,52 @@ def wait_key():
         input()
 
 
+def print_image_sixel(path: str, max_width: int = 200) -> None:
+    """Render an image in the terminal using Sixel (real pixels; requires Sixel-capable terminal).
+    Resizes large images to avoid Windows Terminal buffer limits."""
+    if sys.platform == "win32":
+        # sixel.cellsize imports termios (Unix-only); mock it so sixel can load on Windows
+        import types
+
+        _termios = types.ModuleType("termios")
+        _termios.tcgetattr = lambda fd: None
+        _termios.tcsetattr = lambda fd, opt, attr: None
+        _termios.TCSANOW = 0
+        _termios.TCSAFLUSH = 1
+        _termios.ECHO = 1
+        _termios.ICANON = 2
+        sys.modules["termios"] = _termios
+
+    from io import BytesIO
+
+    from PIL import Image
+    from sixel.sixel import SixelWriter
+
+    img = Image.open(path).convert("RGB")
+    if img.width > max_width:
+        ratio = max_width / img.width
+        new_size = (max_width, int(img.height * ratio))
+        img = img.resize(new_size, Image.Resampling.LANCZOS)
+    buf = BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+
+    # Use body_only=False for full Sixel, but disable save/restore cursor (DECSC/DECRC)
+    # which can cause Windows Terminal to clear the image after display
+    writer = SixelWriter(body_only=False)
+    writer.save_position = lambda out: None
+    writer.restore_position = lambda out: None
+    writer.draw(buf, output=sys.stdout)
+    print()  # newline so prompt appears below the image
+    sys.stdout.flush()
+
+
 def print_help():
     """Print the help message with available commands."""
     commands = [
         ("help", "Show this help message"),
         ("clear", "Clear the screen"),
+        ("image", "Display batman.png in the terminal (Sixel; requires supported terminal)"),
         (
             "work",
             "Lists the contents of the current work directory (in ASCII tree format)",
@@ -72,6 +113,9 @@ def print_welcome():
     )
     print(f"{ansi.DIM}You can use the following commands:{ansi.RESET}")
     print_help()
+    print(
+        f"{ansi.DIM}{ansi.RESET}{ansi.CYAN}You can ask anything, enter a command or type help to get started.{ansi.RESET}\n"
+    )
 
 
 def print_goodbye():

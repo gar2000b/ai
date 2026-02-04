@@ -1,5 +1,7 @@
 """Main command loop for the agent REPL."""
 
+import os
+
 from commands.command import _run_os_command
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 
@@ -10,6 +12,7 @@ from utils.screen import (
     clear_screen,
     print_goodbye,
     print_help,
+    print_image_sixel,
     print_welcome,
     print_work_directory,
 )
@@ -19,7 +22,7 @@ def agent_loop():
     """Run the main command loop until the user exits."""
     while True:
         command = session.prompt(
-            [("class:prompt", "Ask anything or Enter a command: ")],
+            [("class:prompt", "Prompt: ")],
             auto_suggest=AutoSuggestFromHistory(),
             key_bindings=key_bindings,
         )
@@ -35,6 +38,8 @@ def agent_loop():
         elif command == "reset":
             clear_screen()
             print_welcome()
+        elif command == "image":
+            print_image_sixel(os.path.join(agent_dir, "images", "batman.png"))
         elif command.startswith("!"):
             _run_os_command(command[1:].strip())
         else:
