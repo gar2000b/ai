@@ -1,4 +1,11 @@
 """Key bindings for the prompt session (e.g. Ctrl+L to clear screen, Ctrl+R to reset)."""
+# Remap Shift+Enter: prompt_toolkit maps \x1b[27;2;13~ to Enter; we remap to ControlJ
+# so our c-j binding catches it and inserts newline (Enter stays as accept).
+from prompt_toolkit.input import ansi_escape_sequences
+from prompt_toolkit.keys import Keys
+
+ansi_escape_sequences.ANSI_SEQUENCES["\x1b[27;2;13~"] = Keys.ControlJ
+
 from prompt_toolkit.application.current import get_app
 from prompt_toolkit.application.run_in_terminal import run_in_terminal
 from prompt_toolkit.filters import Condition
@@ -42,4 +49,16 @@ def _accept_suggestion(event):
     b = event.current_buffer
     if b.suggestion:
         b.insert_text(b.suggestion.text)
+
+
+@key_bindings.add("c-n")
+def _newline(event):
+    """Ctrl+N inserts a newline."""
+    event.current_buffer.insert_text("\n")
+
+
+@key_bindings.add("enter")
+def _enter_accept(event):
+    """Enter accepts/submits the input (overrides multiline default of newline)."""
+    event.current_buffer.validate_and_handle()
 

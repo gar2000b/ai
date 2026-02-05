@@ -75,7 +75,15 @@ def print_help():
     commands = [
         ("help", "Show this help message"),
         ("clear", "Clear the screen"),
-        ("image [file|path]", "Display an image (default: batman.png in images/; or full path; Sixel)"),
+        (
+            "image [file|path]",
+            "Display an image (default: batman.png; paths relative to images/ or absolute; Sixel)",
+        ),
+        (
+            "list <filename>",
+            "Display a file with syntax highlighting (paths relative to work/ or absolute)",
+        ),
+        ("Ctrl+N", "Newline in prompt (multiline); Enter submits"),
         (
             "work",
             "Lists the contents of the current work directory (in ASCII tree format)",
@@ -332,6 +340,12 @@ _EXTENSION_LEXER = {
 }
 
 
+def lexer_for_file_path(file_path: str) -> str:
+    """Return Pygments lexer name from file extension; default to 'text'."""
+    ext = os.path.splitext(file_path)[1].lower()
+    return _EXTENSION_LEXER.get(ext, "text")
+
+
 def lexer_for_display_command(cmd: str) -> str | None:
     """If cmd is cat/type with a file path, return Pygments lexer name from extension; else None."""
     parts = cmd.strip().split()
@@ -339,6 +353,5 @@ def lexer_for_display_command(cmd: str) -> str | None:
         return None
     for part in parts[1:]:
         if not part.startswith("-"):
-            ext = os.path.splitext(part)[1].lower()
-            return _EXTENSION_LEXER.get(ext, "text")
+            return lexer_for_file_path(part)
     return "text"
