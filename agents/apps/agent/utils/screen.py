@@ -84,6 +84,10 @@ def print_help():
             "list <filename>",
             "Display a file with syntax highlighting (paths relative to work/ or absolute)",
         ),
+        (
+            "run <name|path>",
+            "Compile (Java) and run a program; paths relative to work/ or absolute (e.g. run fruits, run work/Fibonacci)",
+        ),
         ("Ctrl+N", "Newline in prompt (multiline); Enter submits"),
         (
             "work",

@@ -4,7 +4,7 @@ import os
 import sys
 
 import constants.ansi as ansi
-from commands.command import _run_os_command, list_file
+from commands.command import _run_os_command, list_file, run_program
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.validation import Validator
 
@@ -80,6 +80,14 @@ def agent_loop():
             else:
                 print(f"Image does not exist: {image_path}")
             print()
+        elif command == "run" or command.startswith("run "):
+            parts = command.split(maxsplit=1)
+            if len(parts) < 2 or not parts[1].strip():
+                print(f"\n{ansi.DIM}Usage: run <name|path> (e.g. run fruits, run work/Fibonacci){ansi.RESET}\n")
+            else:
+                base_name = parts[1].strip()
+                work_dir = os.path.join(agent_dir, "work")
+                run_program(work_dir, base_name)
         elif command == "list" or command.startswith("list "):
             # Examples (relative to work/): main.py, src/utils.py, pkg/sub/module.py
             # Examples (absolute): /home/user/code/app.py  |  C:\dev\project\main.py
