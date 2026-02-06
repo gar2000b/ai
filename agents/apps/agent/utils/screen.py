@@ -2,6 +2,7 @@ import os
 import sys
 import time
 from io import StringIO
+from itertools import chain
 
 import constants.ansi as ansi
 from rich.console import Console
@@ -224,9 +225,14 @@ def _parse_stream_for_code_blocks(stream):
 
 def print_llm_response_stream(stream, delay: float = 0.02) -> None:
     """Consume a stream; typewrite text, render markdown code blocks with syntax highlighting."""
+    parsed = _parse_stream_for_code_blocks(stream)
+    try:
+        first_segment = next(parsed)
+    except StopIteration:
+        return
     print(f"\n{ansi.BOLD}{ansi.RED}LLM Response: {ansi.RESET}{ansi.WHITE}", end="", flush=True)
     last_was_text = True
-    for segment in _parse_stream_for_code_blocks(stream):
+    for segment in chain([first_segment], parsed):
         if segment[0] == "text":
             last_was_text = True
             for char in segment[1]:
