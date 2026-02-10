@@ -76,9 +76,15 @@ def print_help():
     commands = [
         ("help", "Show this help message"),
         ("clear", "Clear the screen"),
+        ("clear context", "Clear the chat context (message history); alias: context"),
+        ("print messages", "Print the chat context (user/assistant/tool messages); alias: messages"),
         (
             "image [file|path]",
             "Display an image (default: batman.png; paths relative to images/ or absolute; Sixel)",
+        ),
+        (
+            "clone java <source> <target>",
+            "Clone a Java file and replace class name occurrences (e.g. clone java Test.java NewTest.java)",
         ),
         (
             "list <filename>",
@@ -89,6 +95,8 @@ def print_help():
             "Compile (Java) and run a program; paths relative to work/ or absolute (e.g. run fruits, run work/Fibonacci)",
         ),
         ("Ctrl+N", "Newline in prompt (multiline); Enter submits"),
+        ("Ctrl+C", "Clear current input (does not exit)"),
+        ("Ctrl+X", "Exit the agent"),
         (
             "work",
             "Lists the contents of the current work directory (in ASCII tree format)",
@@ -136,7 +144,7 @@ def print_welcome():
 
 
 def print_goodbye():
-    """Print the goodbye message (used for exit command and Ctrl+C)."""
+    """Print the goodbye message (used for exit command and Ctrl+X)."""
     print(f"\n{ansi.DIM}Thanks for using the AI Discovery Agent.{ansi.RESET}")
     print(f"{ansi.BOLD}{ansi.RED}Goodbye!{ansi.RESET}\n")
 
@@ -287,18 +295,31 @@ def _tree_lines(root_path, prefix=""):
             yield from _tree_lines(path, prefix + extension)
 
 
-def print_work_directory(agent_dir: str):
-    """Print the contents of the work directory (in ASCII tree format)."""
+def get_work_directory_tree(agent_dir: str) -> dict:
+    """Return work directory tree as {success, work_dir, tree, error?}. Tree is plain ASCII."""
     work_dir = os.path.join(agent_dir, "work")
-    print(f"\n{ansi.DIM}Contents of the current work directory:\n{ansi.RESET}")
     if not os.path.isdir(work_dir):
-        print(f"{ansi.DIM}(work directory not found){ansi.RESET}\n")
-        return
+        return {"success": False, "work_dir": work_dir, "tree": "", "error": "work directory not found"}
     work_name = os.path.basename(work_dir.rstrip(os.sep)) or "work"
-    print(f"{ansi.BOLD}./{work_name}/{ansi.RESET}")
+    lines = [f"./{work_name}/"]
     for name, line_prefix in _tree_lines(work_dir):
+        lines.append(f"{line_prefix}{name}")
+    return {"success": True, "work_dir": work_dir, "tree": "\n".join(lines)}
+
+
+def print_work_directory(agent_dir: str) -> dict:
+    """Print the contents of the work directory (in ASCII tree format). Returns get_work_directory_tree result."""
+    result = get_work_directory_tree(agent_dir)
+    print(f"\n{ansi.DIM}Contents of the current work directory:\n{ansi.RESET}")
+    if not result["success"]:
+        print(f"{ansi.DIM}({result['error']}){ansi.RESET}\n")
+        return result
+    work_name = os.path.basename(result["work_dir"].rstrip(os.sep)) or "work"
+    print(f"{ansi.BOLD}./{work_name}/{ansi.RESET}")
+    for name, line_prefix in _tree_lines(result["work_dir"]):
         print(f"{ansi.DIM}{line_prefix}{ansi.RESET}{name}")
     print()
+    return result
 
 
 def print_images_directory(agent_dir: str):
