@@ -37,6 +37,10 @@ The script loads `trace_hq/.env`, writes a temporary MySQL `[client]` config fil
    (Use this in code only; never log it or pass the password on a shell command line.)
 4. **Security:** Never log or expose `DB_PASSWORD`; never commit real credentials; keep `.env` in `.gitignore`. For CLI, use `scripts/mysql.sh` so the password is not on the command line.
 
+## Schema
+
+Table definitions (DDL only, no data) live in **`trace_hq/database/schema/`** as numbered `.sql` files. Apply in order (`01_projects.sql` through `06_story_history_audit.sql`). See `database/schema/README.md` for a short index and requirements references. Do not execute against the database until schemas have been reviewed.
+
 ## Quick reference
 
 | Item        | Env var     | Example        |

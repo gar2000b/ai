@@ -1,0 +1,41 @@
+-- ---------------------------------------------------------------------------
+-- User stories (single source of truth for work items)
+-- Ref: USER-STORY.md — core identity, execution state, governance, code/artifact tracking
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS `stories` (
+  `id`                   VARCHAR(16) NOT NULL COMMENT 'e.g. S001, S002',
+  `title`                VARCHAR(512) NOT NULL,
+  `description`          TEXT,
+  `type`                 VARCHAR(32) NOT NULL COMMENT 'dev | writing | docs | research | infrastructure | performance | manual',
+  `priority`              VARCHAR(16) NOT NULL COMMENT 'low | medium | high | critical',
+  `workflow_id`          INT UNSIGNED NULL COMMENT 'NULL = not yet assigned to a workflow',
+  `workflow_stage_id`    INT UNSIGNED NULL COMMENT 'current stage within workflow; NULL if workflow_id NULL',
+  `created_by_agent_id`  INT UNSIGNED NULL COMMENT 'typically owner',
+  `created_at`           DATETIME(3) NOT NULL DEFAULT (CURRENT_TIMESTAMP(3)),
+  `last_updated_at`     DATETIME(3) NOT NULL DEFAULT (CURRENT_TIMESTAMP(3)) ON UPDATE CURRENT_TIMESTAMP(3),
+  `blocked`              TINYINT(1) NOT NULL DEFAULT 0,
+  `blocked_reason`       VARCHAR(512) NULL,
+  `blocked_at`           DATETIME(3) NULL,
+  `blocked_by`           VARCHAR(32) NULL COMMENT 'dependency | environment | owner | external | unknown',
+  `assignee_id`          INT UNSIGNED NULL COMMENT 'NULL = unassigned',
+  `acceptance_criteria`  TEXT,
+  `implementation_notes` TEXT,
+  `branch`               VARCHAR(255) NULL,
+  `review_reference`     VARCHAR(512) NULL COMMENT 'PR link, review id',
+  `artifact`             VARCHAR(512) NULL COMMENT 'doc path or deliverable location',
+  `review_status`       VARCHAR(32) NOT NULL DEFAULT 'not-required' COMMENT 'not-required | pending | approved | rejected',
+  `review_notes`         TEXT NULL,
+  `rejection_count`      INT UNSIGNED NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`),
+  KEY `ix_stories_workflow_id` (`workflow_id`),
+  KEY `ix_stories_workflow_stage_id` (`workflow_stage_id`),
+  KEY `ix_stories_assignee_id` (`assignee_id`),
+  KEY `ix_stories_created_by_agent_id` (`created_by_agent_id`),
+  KEY `ix_stories_last_updated_at` (`last_updated_at`),
+  KEY `ix_stories_blocked` (`blocked`),
+  CONSTRAINT `fk_stories_workflow` FOREIGN KEY (`workflow_id`) REFERENCES `workflows` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `fk_stories_workflow_stage` FOREIGN KEY (`workflow_stage_id`) REFERENCES `workflow_stages` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `fk_stories_created_by_agent` FOREIGN KEY (`created_by_agent_id`) REFERENCES `agents` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `fk_stories_assignee` FOREIGN KEY (`assignee_id`) REFERENCES `agents` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
