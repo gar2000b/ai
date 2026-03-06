@@ -1,203 +1,191 @@
 # user-story.md
 
-# ==========================================================
-# USER STORY DESIGN ARTIFACT
-# ==========================================================
-#
-# This document defines the conceptual structure of a User Story
-# within the Open Workflows Project system.
-#
-# This is NOT intended for machine parsing.
-# It is a design reference to guide tooling and system evolution.
-#
-# A User Story:
-# - Represents a unit of work
-# - Maintains identity independent of workflow definitions
-# - Is linked to at most one workflow
-# - Stores its own execution state
-# - May depend on other stories
-# - May be blocked
-# - Is auditable and traceable
-#
-# Stories are the single source of truth.
-# Workflows define allowed stage sequences and transition rules.
-# Reverse dependency relationships are derived by the system.
+## USER STORY DESIGN ARTIFACT
 
+This document defines the conceptual structure of a User Story within the Open Workflows Project system.
 
-# ==========================================================
-# CORE IDENTITY
-# ==========================================================
+This is NOT intended for machine parsing.
+It is a design reference to guide tooling and system evolution.
 
-- id:
-    S### (globally unique within project)
+A User Story:
 
-- title:
-    short, descriptive summary
+- Represents a unit of work
+- Maintains identity independent of workflow definitions
+- Is linked to at most one workflow
+- Stores its own execution state
+- May depend on other stories
+- May be blocked
+- Is auditable and traceable
 
-- description:
-    longer explanation of intent and context
+Stories are the single source of truth.
+Workflows define allowed stage sequences and transition rules.
+Reverse dependency relationships are derived by the system.
 
-- type:
-    dev | writing | docs | research | infrastructure | performance | manual
+---
 
-- priority:
-    low | medium | high | critical
+## CORE IDENTITY
 
-- workflow:
-    development | performance | devops | manual | -
+- **id:**  
+  S### (globally unique within project)
 
-    Represents the workflow this story belongs to.
-    "-" means not yet assigned to a workflow.
+- **title:**  
+  short, descriptive summary
 
-- createdBy:
-    owner
+- **description:**  
+  longer explanation of intent and context
 
-- createdAt:
-    timestamp
+- **type:**  
+  dev | writing | docs | research | infrastructure | performance | manual
 
-- lastUpdatedAt:
-    timestamp
+- **priority:**  
+  low | medium | high | critical
 
+- **workflow:**  
+  development | performance | devops | manual | -
 
-# ==========================================================
-# DEPENDENCIES
-# ==========================================================
+  Represents the workflow this story belongs to.  
+  "-" means not yet assigned to a workflow.
 
-- dependencies:
-    - list of story IDs that must reach Done
-      before this story may progress beyond Todo.
+- **createdBy:**  
+  owner
 
-    Example:
-      - S003
-      - S014
+- **createdAt:**  
+  timestamp
 
-Notes:
+- **lastUpdatedAt:**  
+  timestamp
+
+---
+
+## DEPENDENCIES
+
+- **dependencies:**  
+  list of story IDs that must reach Done before this story may progress beyond Todo.
+
+  Example:
+
+  - S003
+  - S014
+
+**Notes:**
+
 - Dependency relationships are stored in one direction only.
 - Reverse relationships ("dependents") are derived by the system.
 - The tool should maintain an indexed lookup for efficient querying.
-- A story should not move forward if dependencies are incomplete
-  (unless overridden by owner).
+- A story should not move forward if dependencies are incomplete (unless overridden by owner).
 
+---
 
-# ==========================================================
-# BLOCKING STATE
-# ==========================================================
+## BLOCKING STATE
 
-- blocked:
-    true | false
+- **blocked:**  
+  true | false
 
-- blockedReason:
-    explanation of why work cannot proceed
+- **blockedReason:**  
+  explanation of why work cannot proceed
 
-- blockedAt:
-    timestamp (optional)
+- **blockedAt:**  
+  timestamp (optional)
 
-- blockedBy:
-    dependency | environment | owner | external | unknown
+- **blockedBy:**  
+  dependency | environment | owner | external | unknown
 
-Notes:
+**Notes:**
+
 - When blocked == true, the story should not progress stages.
 - Owner may override blocked status.
 - Blocking events should be logged.
 
+---
 
-# ==========================================================
-# WORKFLOW EXECUTION STATE (SOURCE OF TRUTH)
-# ==========================================================
+## WORKFLOW EXECUTION STATE (SOURCE OF TRUTH)
 
-- currentStage:
-    Todo
-    Planning
-    In Progress
-    Review
-    Done
+- **currentStage:**  
+  Todo | Planning | In Progress | Review | Done
 
-    This is the canonical stage name.
-    The valid stage order is defined by the assigned workflow.
+  This is the canonical stage name.  
+  The valid stage order is defined by the assigned workflow.
 
-- stageRole:
-    dev | unit-test | integration-test | performance-test | devops | owner
+- **stageRole:**  
+  dev | unit-test | integration-test | performance-test | devops | owner
 
-    Represents the role responsible for executing
-    work in the current stage.
+  Represents the role responsible for executing work in the current stage.
 
-    Example:
-      currentStage: Planning
-      stageRole: dev
+  Example:
 
-- assignee:
-    unassigned | <agent-name>
+  - currentStage: Planning  
+  - stageRole: dev
 
-- stageHistory:
-    append-only record of:
-    - stage transitions
-    - role changes
-    - assignment changes
-    - workflow transfers
+- **assignee:**  
+  unassigned | &lt;agent-name&gt;
 
+- **stageHistory:**  
+  append-only record of:
 
-# ==========================================================
-# EXECUTION DETAILS
-# ==========================================================
+  - stage transitions
+  - role changes
+  - assignment changes
+  - workflow transfers
 
-- acceptanceCriteria:
-    - measurable, testable outcomes
+---
 
-- implementationNotes:
-    technical notes, context, decisions
+## EXECUTION DETAILS
 
-- relatedStories:
-    - list of associated story ids (non-blocking relationship)
+- **acceptanceCriteria:**  
+  measurable, testable outcomes
 
+- **implementationNotes:**  
+  technical notes, context, decisions
 
-# ==========================================================
-# CODE & ARTIFACT TRACKING
-# ==========================================================
+- **relatedStories:**  
+  list of associated story ids (non-blocking relationship)
 
-- branch:
-    git branch name (if applicable)
+---
 
-- reviewReference:
-    PR link, review id, or artifact reference
+## CODE & ARTIFACT TRACKING
 
-- artifact:
-    documentation path or deliverable location
+- **branch:**  
+  git branch name (if applicable)
 
+- **reviewReference:**  
+  PR link, review id, or artifact reference
 
-# ==========================================================
-# GOVERNANCE & REVIEW
-# ==========================================================
+- **artifact:**  
+  documentation path or deliverable location
 
-- reviewStatus:
-    not-required | pending | approved | rejected
+---
 
-- reviewNotes:
-    summary of owner feedback
+## GOVERNANCE & REVIEW
 
-- rejectionCount:
-    integer
+- **reviewStatus:**  
+  not-required | pending | approved | rejected
 
+- **reviewNotes:**  
+  summary of owner feedback
 
-# ==========================================================
-# AUDIT LOG
-# ==========================================================
+- **rejectionCount:**  
+  integer
 
-- notes:
-    append-only chronological log of:
-    - claims
-    - planning decisions
-    - handoffs
-    - review outcomes
-    - rejections
-    - owner interventions
-    - workflow transfers
-    - dependency adjustments
-    - blocking events
+---
 
+## AUDIT LOG
 
-# ==========================================================
-# DESIGN PRINCIPLES
-# ==========================================================
+- **notes:**  
+  append-only chronological log of:
+
+  - claims
+  - planning decisions
+  - handoffs
+  - review outcomes
+  - rejections
+  - owner interventions
+  - workflow transfers
+  - dependency adjustments
+  - blocking events
+
+---
+
+## DESIGN PRINCIPLES
 
 1. Stories are the single source of truth.
 2. Workflows define permissible stage sequences.

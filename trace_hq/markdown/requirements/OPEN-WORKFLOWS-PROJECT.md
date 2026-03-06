@@ -1,54 +1,49 @@
 # open-workflows-project.md
 
-# ==========================================================
-# OPEN WORKFLOWS PROJECT
-# ==========================================================
-#
-# This file defines a Workflows Project.
-#
-# A Workflows Project:
-# - Contains 1..n independent workflows
-# - Each workflow represents a structured delivery pipeline
-# - Each workflow is represented as a board in the tool
-# - The UI side menu contains "Workflows"
-# - Selecting it opens the last active workflow board
-# - Creating a new workflow creates a new board within this project
-#
-# "open" is a bespoke namespace.
-# "workflows-project" reflects that multiple workflows exist under one project.
-#
-# This file is a design artifact (not machine-parsed).
-# It defines conceptual rules for workflow behavior.
+## OPEN WORKFLOWS PROJECT
+
+This file defines a Workflows Project.
+
+A Workflows Project:
+
+- Contains 1..n independent workflows
+- Each workflow represents a structured delivery pipeline
+- Each workflow is represented as a board in the tool
+- The UI side menu contains "Workflows"
+- Selecting it opens the last active workflow board
+- Creating a new workflow creates a new board within this project
+
+"open" is a bespoke namespace.
+"workflows-project" reflects that multiple workflows exist under one project.
+
+This file is a design artifact (not machine-parsed).
+It defines conceptual rules for workflow behavior.
 
 ---
 
-# ==========================================================
-# AGENT TYPES (SYSTEM ROLE MODEL)
-# ==========================================================
+## AGENT TYPES (SYSTEM ROLE MODEL)
 
-- owner  
+- **owner**  
   Strategic workflow authority who defines requirements, controls routing and standards, coordinates overall workflow, reviews outcomes, merges PRs, and is the final decision-maker across all workflows.
 
-- dev agent  
+- **dev agent**  
   Plans tasks before implementation, implements features and fixes according to acceptance criteria, produces working code and PRs, incorporates feedback, and reworks rejected changes.
 
-- unit-test agent  
+- **unit-test agent**  
   Plans and creates isolated, deterministic tests for individual components, maintains unit test quality, and reworks tests when failures or feedback require refinement.
 
-- integration-test agent  
+- **integration-test agent**  
   Verifies cross-component interactions and is responsible for maintaining, updating, and operating the shared integration test harness system.
 
-- performance-test agent  
+- **performance-test agent**  
   Assesses scalability, load handling, latency, and resource usage under stress, and maintains the shared performance test harness infrastructure.
 
-- devops agent  
+- **devops agent**  
   Manages CI/CD, infrastructure, environments, deployments, platform updates, and operational reliability. Responsible for pushing deployments and may be invoked by other agents.
 
 ---
 
-# ==========================================================
-# WORKFLOW MODEL PRINCIPLES
-# ==========================================================
+## WORKFLOW MODEL PRINCIPLES
 
 - Stage roles define who performs work in that stage.
 - Review stages are governance gates owned by the owner.
@@ -56,7 +51,7 @@
 - Workflows are independent but may trigger one another.
 - No execution role may bypass Review stages.
 
-Standard stage pattern:
+**Standard stage pattern:**
 
 - Todo
 - Planning (role)
@@ -66,11 +61,9 @@ Standard stage pattern:
 
 ---
 
-# ==========================================================
-# TRANSITION MODEL
-# ==========================================================
+## TRANSITION MODEL
 
-## Owner Authority
+### Owner Authority
 
 - The owner may move a story from any stage to any other stage.
 - The owner may:
@@ -82,12 +75,11 @@ Standard stage pattern:
   - Correct workflow errors
 - The owner is the ultimate governance authority.
 
-## Non-Owner Roles
+### Non-Owner Roles
 
 Non-owner roles (dev, unit-test, integration-test, performance-test, devops):
 
-- May only move a story from their current stage
-  to the immediate next stage in the workflow sequence.
+- May only move a story from their current stage to the immediate next stage in the workflow sequence.
 - May not skip stages.
 - May not move a story backwards.
 - May not move beyond a Review stage.
@@ -95,14 +87,14 @@ Non-owner roles (dev, unit-test, integration-test, performance-test, devops):
 
 ### Example (Development Workflow)
 
-Allowed:
+**Allowed:**
 
-3. In Progress (dev)
+3. In Progress (dev)  
 → 4. Review (owner)
 
-Not Allowed:
+**Not Allowed:**
 
-3. In Progress (dev)
+3. In Progress (dev)  
 → 5. Planning (unit-test)
 
 This enforces:
@@ -114,14 +106,12 @@ This enforces:
 
 ---
 
-# ==========================================================
-# WORKFLOW 1: DEVELOPMENT WORKFLOW
-# ==========================================================
+## WORKFLOW 1: DEVELOPMENT WORKFLOW
 
-Purpose:
+**Purpose:**  
 Deliver features from implementation through integration validation.
 
-Stages:
+**Stages:**
 
 1. Todo
 2. Planning (dev)
@@ -135,7 +125,7 @@ Stages:
 10. Review (owner)
 11. Done
 
-Notes:
+**Notes:**
 
 - Dev implements feature.
 - Owner reviews and merges.
@@ -149,14 +139,12 @@ Notes:
 
 ---
 
-# ==========================================================
-# WORKFLOW 2: PERFORMANCE TESTING WORKFLOW
-# ==========================================================
+## WORKFLOW 2: PERFORMANCE TESTING WORKFLOW
 
-Purpose:
+**Purpose:**  
 Validate scalability and stress behaviour after integration stability.
 
-Stages:
+**Stages:**
 
 1. Todo
 2. Planning (performance-test)
@@ -164,7 +152,7 @@ Stages:
 4. Review (owner)
 5. Done
 
-Notes:
+**Notes:**
 
 - Uses shared performance harness.
 - May depend on integration-test plugins.
@@ -173,14 +161,12 @@ Notes:
 
 ---
 
-# ==========================================================
-# WORKFLOW 3: DEVOPS WORKFLOW
-# ==========================================================
+## WORKFLOW 3: DEVOPS WORKFLOW
 
-Purpose:
+**Purpose:**  
 Deploy, promote, and operationalize validated changes.
 
-Stages:
+**Stages:**
 
 1. Todo
 2. Planning (devops)
@@ -188,7 +174,7 @@ Stages:
 4. Review (owner)
 5. Done
 
-Notes:
+**Notes:**
 
 - Handles CI/CD adjustments.
 - Manages infrastructure updates.
@@ -197,14 +183,12 @@ Notes:
 
 ---
 
-# ==========================================================
-# WORKFLOW 4: MANUAL WORKFLOW
-# ==========================================================
+## WORKFLOW 4: MANUAL WORKFLOW
 
-Purpose:
+**Purpose:**  
 Process all user stories that require manual human work only.
 
-Stages:
+**Stages:**
 
 1. Todo
 2. Planning (owner)
@@ -212,7 +196,7 @@ Stages:
 4. Review (owner)
 5. Done
 
-Notes:
+**Notes:**
 
 - No automated agents are involved.
 - Owner performs all stages.
@@ -226,9 +210,7 @@ Notes:
 
 ---
 
-# ==========================================================
-# COORDINATION PRINCIPLES
-# ==========================================================
+## COORDINATION PRINCIPLES
 
 - Owner governs all Review stages across all workflows.
 - Execution roles cannot self-approve.
@@ -239,9 +221,7 @@ Notes:
 
 ---
 
-# ==========================================================
-# FUTURE EXTENSIONS
-# ==========================================================
+## FUTURE EXTENSIONS
 
 - Cross-workflow dependency tracking
 - Automated workflow triggers
