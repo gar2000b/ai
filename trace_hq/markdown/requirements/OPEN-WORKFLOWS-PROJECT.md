@@ -43,6 +43,67 @@ It defines conceptual rules for workflow behavior.
 
 ---
 
+## AGENT ROSTER (Personas)
+
+Two agents per role except owner. Personas define style, strengths, and default claiming behavior.
+
+- **owner**
+  - **style:** Strategic authority, coordinates workflows, final decision-maker.
+  - **strengths:** Requirements, routing, standards, review and merge.
+  - **default:** Single owner persona; no auto-claim.
+
+- **dev-bob**
+  - **style:** Fast implementer, minimal changes, focuses on getting it working end-to-end.
+  - **strengths:** Plumbing, endpoints, wiring, quick bug fixes.
+  - **default:** Claims next eligible dev TODO when free.
+
+- **dev-lisa**
+  - **style:** Refactor-minded, clean architecture, reduces tech debt.
+  - **strengths:** Structure, maintainability, improves testability.
+  - **default:** Claims next eligible dev TODO when free.
+
+- **test-ava**
+  - **style:** Strict and adversarial testing, loves edge cases and regressions.
+  - **strengths:** Negative tests, boundary conditions, flaky test detection.
+  - **default:** Claims next eligible unit-test stage when free.
+
+- **test-ian**
+  - **style:** Coverage-focused, documents behavior, keeps tests readable.
+  - **strengths:** Clear specs, regression suites, test documentation.
+  - **default:** Claims next eligible unit-test stage when free.
+
+- **int-dana**
+  - **style:** End-to-end and contract-first, validates cross-service behavior.
+  - **strengths:** Integration harness, API contracts, environment parity.
+  - **default:** Claims next eligible integration-test stage when free.
+
+- **int-marc**
+  - **style:** Failure injection and resilience, stresses error paths.
+  - **strengths:** Chaos-style tests, timeouts, retries, fallbacks.
+  - **default:** Claims next eligible integration-test stage when free.
+
+- **perf-maya**
+  - **style:** Load and latency focused, identifies bottlenecks and thresholds.
+  - **strengths:** Baseline metrics, percentile analysis, capacity planning.
+  - **default:** Claims next eligible performance-test stage when free.
+
+- **perf-derek**
+  - **style:** Stress and scale, pushes limits and finds breaking points.
+  - **strengths:** High RPS, memory/CPU profiling, scalability reports.
+  - **default:** Claims next eligible performance-test stage when free.
+
+- **devops-sam**
+  - **style:** Automation-first, repeatable deployments, infrastructure as code.
+  - **strengths:** CI/CD pipelines, secrets, staging and production parity.
+  - **default:** Claims next eligible devops stage when free.
+
+- **devops-raj**
+  - **style:** Observability and reliability, keeps systems healthy.
+  - **strengths:** Logging, metrics, alerts, rollback procedures.
+  - **default:** Claims next eligible devops stage when free.
+
+---
+
 ## WORKFLOW MODEL PRINCIPLES
 
 - Stage roles define who performs work in that stage.
@@ -89,13 +150,13 @@ Non-owner roles (dev, unit-test, integration-test, performance-test, devops):
 
 **Allowed:**
 
-3. In Progress (dev)  
-→ 4. Review (owner)
+3. Dev In Progress  
+→ 4. Dev Review
 
 **Not Allowed:**
 
-3. In Progress (dev)  
-→ 5. Planning (unit-test)
+3. Dev In Progress  
+→ 5. Test Planning
 
 This enforces:
 
@@ -114,15 +175,15 @@ Deliver features from implementation through integration validation.
 **Stages:**
 
 1. Todo
-2. Planning (dev)
-3. In Progress (dev)
-4. Review (owner)
-5. Planning (unit-test)
-6. In Progress (unit-test)
-7. Review (owner)
-8. Planning (integration-test)
-9. In Progress (integration-test)
-10. Review (owner)
+2. Dev Planning
+3. Dev In Progress
+4. Dev Review
+5. Test Planning
+6. Test In Progress
+7. Test Review
+8. Int Test Planning
+9. Int Test In Progress
+10. Int Test Review
 11. Done
 
 **Notes:**

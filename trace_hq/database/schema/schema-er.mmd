@@ -1,0 +1,105 @@
+%% Entity-Relationship diagram: Trace HQ Open Workflows schema
+%% Renders in any Mermaid-supported viewer (GitHub, VS Code, etc.)
+%% Generated from database/schema/*.sql
+
+erDiagram
+  projects {
+    int id PK
+    varchar name
+    datetime created_at
+    datetime updated_at
+  }
+
+  workflows {
+    int id PK
+    int project_id FK
+    varchar code
+    varchar name
+    text description
+    datetime created_at
+    datetime updated_at
+  }
+
+  workflow_stages {
+    int id PK
+    int workflow_id FK
+    smallint stage_order
+    varchar stage_name
+    varchar stage_role
+    datetime created_at
+  }
+
+  roles {
+    int id PK
+    varchar code
+  }
+
+  agents {
+    int id PK
+    varchar name
+    int role_id FK
+    datetime created_at
+    datetime updated_at
+  }
+
+  stories {
+    varchar id PK
+    varchar title
+    varchar type
+    varchar priority
+    int workflow_id FK
+    int workflow_stage_id FK
+    int created_by_agent_id FK
+    int assignee_id FK
+    boolean blocked
+    varchar review_status
+    datetime created_at
+    datetime last_updated_at
+  }
+
+  story_dependencies {
+    varchar story_id PK,FK
+    varchar depends_on_story_id PK,FK
+    datetime created_at
+  }
+
+  story_related {
+    varchar story_id PK,FK
+    varchar related_story_id PK,FK
+    datetime created_at
+  }
+
+  story_stage_history {
+    bigint id PK
+    varchar story_id FK
+    varchar from_stage_name
+    varchar to_stage_name
+    int from_workflow_stage_id FK
+    int to_workflow_stage_id FK
+    int assignee_id FK
+    int changed_by_agent_id FK
+    datetime created_at
+  }
+
+  story_audit_log {
+    bigint id PK
+    varchar story_id FK
+    varchar event_type
+    text note
+    datetime created_at
+  }
+
+  projects ||--o{ workflows : "has"
+  workflows ||--o{ workflow_stages : "has stages"
+  roles ||--o{ agents : "has"
+  workflows ||--o{ stories : "assigns"
+  workflow_stages ||--o{ stories : "current stage"
+  agents ||--o{ stories : "created by"
+  agents ||--o{ stories : "assignee"
+  stories ||--o{ story_dependencies : "depends on"
+  stories ||--o{ story_dependencies : "depended on by"
+  stories ||--o{ story_related : "related to"
+  stories ||--o{ story_stage_history : "has history"
+  workflow_stages ||--o{ story_stage_history : "from/to stage"
+  agents ||--o{ story_stage_history : "assignee or changed_by"
+  stories ||--o{ story_audit_log : "has audit"

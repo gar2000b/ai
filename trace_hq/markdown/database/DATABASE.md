@@ -39,7 +39,24 @@ The script loads `trace_hq/.env`, writes a temporary MySQL `[client]` config fil
 
 ## Schema
 
-Table definitions (DDL only, no data) live in **`trace_hq/database/schema/`** as numbered `.sql` files. Apply in order (`01_projects.sql` through `06_story_history_audit.sql`). See `database/schema/README.md` for a short index and requirements references. Do not execute against the database until schemas have been reviewed.
+Table definitions (DDL only, no data) live in **`trace_hq/database/schema/`** as numbered `.sql` files. Apply in order (`01_projects.sql` through `06_story_history_audit.sql`). See `database/schema/README.md` for a short index and requirements references. An **Entity-Relationship diagram** of all tables is in `database/schema/schema-er.mmd` (Mermaid); open it in a Mermaid viewer to see table relationships. Do not execute against the database until schemas have been reviewed.
+
+## Populating the schema
+
+Data scripts live in **`trace_hq/database/data/`**. Run each script from the **`trace_hq`** directory. Apply steps in order when they depend on each other (e.g. project before workflows).
+
+```bash
+# From trace_hq directory — run a data script
+./scripts/mysql.sh < database/data/01_project_mep_sentinel.sql
+```
+
+| Step | Description | Script |
+|------|-------------|--------|
+| 1 | Add a project | [database/data/01_project_mep_sentinel.sql](../../database/data/01_project_mep_sentinel.sql) — inserts project `mep-sentinel` |
+| 2 | Add workflows and stages | [database/data/02_workflows_and_stages.sql](../../database/data/02_workflows_and_stages.sql) — inserts Development, Performance Testing, DevOps, Manual + their stages |
+| 3 | Add roles and agents | [database/data/03_roles_and_agents.sql](../../database/data/03_roles_and_agents.sql) — inserts 6 agent types (roles) + one agent per role |
+
+*(More steps will be added as we populate stories, etc.)*
 
 ## Quick reference
 

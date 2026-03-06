@@ -2,6 +2,12 @@
 
 SQL DDL for the Open Workflows / user-stories model. **Do not run these against a live DB until reviewed.** Apply in numerical order (dependencies are ordered).
 
+## ER diagram
+
+**[schema-er.mmd](schema-er.mmd)** — Entity-Relationship diagram of all tables and foreign-key relationships. Open in any Mermaid-supported viewer (e.g. GitHub, VS Code with a Mermaid extension, or [mermaid.live](https://mermaid.live)) to see how projects, workflows, stages, roles, agents, stories, dependencies, and audit tables connect.
+
+## DDL files
+
 | File | Contents |
 |------|----------|
 | `01_projects.sql` | `projects` — workflow project container |
