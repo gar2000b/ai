@@ -6,6 +6,8 @@ function renderStoryCard(story, stages, onMoved) {
   const div = document.createElement('div');
   div.className = 'story-card' + (story.blocked ? ' blocked' : '');
   div.dataset.storyId = story.id;
+  div.dataset.currentStageId = story.workflow_stage_id || '';
+  div.draggable = true;
 
   const depsText = story.dependencies && story.dependencies.length
     ? `Blocked by ${story.dependencies.join(', ')}`
@@ -27,6 +29,18 @@ function renderStoryCard(story, stages, onMoved) {
       </select>
     </div>
   `;
+
+  div.addEventListener('dragstart', (e) => {
+    if (e.target.closest('.story-move-select')) return;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('application/json', JSON.stringify({
+      storyId: story.id,
+      currentStageId: story.workflow_stage_id || null,
+    }));
+    e.dataTransfer.setData('text/plain', story.id);
+    div.classList.add('dragging');
+  });
+  div.addEventListener('dragend', () => div.classList.remove('dragging'));
 
   const select = div.querySelector('.story-move-select');
   if (select && select.options.length > 1) {

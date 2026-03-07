@@ -169,13 +169,14 @@ These can be deferred to a follow-up if the first draft focuses on read + move o
     - **Workflows** — navigates to the project board (see below).
     - **Settings** — opens settings (theme, etc.).
   - Optional: Home link that shows a simple home view (default view when the app runs).
+  - **Workflows view:** Contains a **board header** (top of the view) with a title on the left and the **project dropdown on the top right** for easy access. The project selector is not in the side menu.
 
 ### 4.2 Client-side “routing”
 
 - **public/js/app.js** (or equivalent)
   - On load: read URL hash or path (e.g. `#/workflows`, `#/settings`) and render the corresponding view. Default route: home.
   - **Last viewed project:** Persist last viewed project id (e.g. in localStorage). When the user chooses “Workflows”, open the project board for that project (or the first project if none saved).
-  - When the user selects a different project (e.g. from a project switcher or future project list), update “last viewed project” and re-render the board.
+  - When the user selects a different project (e.g. from the **project dropdown (top-right of the Workflows view)**), update “last viewed project” and re-render the board.
 
 ### 4.3 Theme (settings)
 
@@ -191,6 +192,7 @@ These can be deferred to a follow-up if the first draft focuses on read + move o
 
 ### 5.1 One page, stacked workflow sections
 
+- **Board header:** The Workflows view has a header at the top: title (e.g. "Project board") on the left, **project dropdown on the top right**. The dropdown is always visible and easily accessible when viewing the board.
 - When the user is on “Workflows” and a project is selected:
   - **GET /api/projects/:projectId/workflows** and **GET /api/projects/:projectId/stories** (or a combined endpoint if preferred).
   - Render **one scrollable page** (the project board) that contains **all** workflows for that project, stacked vertically in workflow id order. Each workflow is one **workflow section**: a kanban-style block with:
@@ -208,10 +210,10 @@ These can be deferred to a follow-up if the first draft focuses on read + move o
 
 ### 5.4 Moving stories
 
-- **Move action:** e.g. dropdown “Move to → Stage X” or drag-and-drop. On action:
-  - Call **PATCH /api/stories/:storyId/stage** with the chosen target `workflow_stage_id`.
-  - Backend enforces transition rules (owner can do anything; for this phase user is always owner). On success, refresh the board (or update the card in place) so the story appears in the new column.
+- **Two ways to move:** (1) **Drag-and-drop** — story cards are draggable; the user drops a card anywhere within a stage column (including on top of another story). The drop target is the column: any release inside that column moves the story to that stage. (2) **Dropdown** — “Move to…” on each card selects a target stage. Both call **PATCH /api/stories/:storyId/stage** with the chosen `workflow_stage_id`.
+- **Drop behaviour:** Releasing the drag anywhere within the chosen stage column (empty space or on another card) updates the story to that stage according to the same transition rules. No-op if dropped on the same stage. Backend enforces transition rules (owner can do anything; for this phase user is always owner). On success, refresh the board so the story appears in the new column.
 - **Target list:** For owner, show all stages of the story’s workflow as valid targets. (Future: for non-owner, only the immediate next stage would be allowed; backend already enforces this.)
+- **Visual feedback:** Cards show a blue outline on hover; while dragging, the card can show reduced opacity; the stage column under the cursor can show a drop-target highlight (e.g. accent border or background).
 
 ### 5.5 Dependencies and blocked state
 

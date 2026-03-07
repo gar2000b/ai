@@ -15,10 +15,6 @@
         <a href="#/workflows" class="nav-item" data-route="workflows">Workflows</a>
         <a href="#/settings" class="nav-item" data-route="settings">Settings</a>
       </nav>
-      <div class="project-switcher" id="project-switcher" style="display: none;">
-        <label for="project-select">Project</label>
-        <select id="project-select"></select>
-      </div>
     </aside>
     <main class="main-content">
       <div id="view-home" class="view hidden">
@@ -26,6 +22,13 @@
         <p>Use the side menu to open <strong>Workflows</strong> (project board) or <strong>Settings</strong>.</p>
       </div>
       <div id="view-workflows" class="view hidden">
+        <header class="workflows-header">
+          <h1 class="workflows-title">Project board</h1>
+          <div class="project-switcher project-switcher--header">
+            <label for="project-select" class="project-switcher__label">Project</label>
+            <select id="project-select" class="project-switcher__select" aria-label="Select project"></select>
+          </div>
+        </header>
         <div id="board-container"></div>
       </div>
       <div id="view-settings" class="view hidden">

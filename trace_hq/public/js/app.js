@@ -37,13 +37,11 @@ function handleRoute() {
 
   if (route === 'home') {
     showView('view-home');
-    document.getElementById('project-switcher').style.display = 'none';
     return;
   }
 
   if (route === 'settings') {
     showView('view-settings');
-    document.getElementById('project-switcher').style.display = 'none';
     const container = document.getElementById('settings-container');
     if (container && window.TraceHqSettings) window.TraceHqSettings.renderSettingsPanel(container);
     return;
@@ -52,9 +50,7 @@ function handleRoute() {
   if (route === 'workflows') {
     showView('view-workflows');
     const container = document.getElementById('board-container');
-    const switcher = document.getElementById('project-switcher');
     const select = document.getElementById('project-select');
-    switcher.style.display = 'block';
 
     window.TraceHqBoard.loadProjects()
       .then((projects) => {
@@ -67,11 +63,14 @@ function handleRoute() {
         const selected = projects.find((p) => p.id === selectedId) || projects[0];
         window.TraceHqBoard.renderBoard(container, selected.id, selected.name);
 
-        select.addEventListener('change', () => {
-          const opt = select.options[select.selectedIndex];
-          const id = parseInt(opt.value, 10);
-          window.TraceHqBoard.renderBoard(container, id, opt.text);
-        });
+        if (!select._boardChangeAttached) {
+          select._boardChangeAttached = true;
+          select.addEventListener('change', () => {
+            const opt = select.options[select.selectedIndex];
+            const id = parseInt(opt.value, 10);
+            window.TraceHqBoard.renderBoard(container, id, opt.text);
+          });
+        }
       })
       .catch((err) => {
         container.innerHTML = '<p>' + escapeHtml(err.message) + '</p>';

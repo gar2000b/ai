@@ -99,27 +99,56 @@ body {
   color: #fff;
 }
 
-.project-switcher {
-  margin-top: auto;
-  padding: 1rem;
-  border-top: 1px solid var(--border);
+/* Workflows view header: title left, project dropdown top right */
+.workflows-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
 }
 
-.project-switcher label {
-  display: block;
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  margin-bottom: 0.25rem;
+.workflows-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text);
 }
 
-.project-switcher select {
-  width: 100%;
-  padding: 0.5rem;
+.project-switcher--header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.75rem;
   background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 1px 2px var(--shadow);
+}
+
+.project-switcher__label {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  margin: 0;
+  white-space: nowrap;
+}
+
+.project-switcher__select {
+  padding: 0.4rem 0.5rem;
+  min-width: 160px;
+  background: var(--bg);
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 4px;
   font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.project-switcher__select:hover,
+.project-switcher__select:focus {
+  border-color: var(--accent);
+  outline: none;
 }
 
 /* Main content */
@@ -164,6 +193,32 @@ body {
   overflow-x: auto;
   padding-bottom: 0.5rem;
   min-height: 200px;
+  /* Hide horizontal scrollbar until hover (Firefox) */
+  scrollbar-width: none;
+  scrollbar-color: transparent transparent;
+}
+.workflow-columns:hover {
+  scrollbar-width: auto;
+  scrollbar-color: var(--text-muted) var(--border);
+}
+/* Hide horizontal scrollbar until hover (Chrome, Safari, Edge) */
+.workflow-columns::-webkit-scrollbar {
+  height: 0 !important;
+}
+.workflow-columns:hover::-webkit-scrollbar {
+  height: 16px !important;
+}
+.workflow-columns::-webkit-scrollbar-track {
+  background: var(--border);
+  border-radius: 8px;
+}
+.workflow-columns::-webkit-scrollbar-thumb {
+  background: var(--text-muted);
+  border-radius: 8px;
+  min-height: 48px;
+}
+.workflow-columns::-webkit-scrollbar-thumb:hover {
+  background: var(--text);
 }
 
 .stage-column {
@@ -174,6 +229,17 @@ body {
   padding: 0.5rem;
   display: flex;
   flex-direction: column;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.stage-column.drop-target {
+  background: var(--menu-bg);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.story-card.dragging {
+  opacity: 0.6;
+  cursor: grabbing;
 }
 
 .stage-column-header {
@@ -207,6 +273,10 @@ body {
 
 .story-card:hover {
   border-color: var(--accent);
+}
+
+.story-card[draggable="true"] {
+  cursor: grab;
 }
 
 .story-card.blocked {

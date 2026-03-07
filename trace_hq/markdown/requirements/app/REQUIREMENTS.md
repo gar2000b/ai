@@ -68,6 +68,7 @@ Integration with **agentic systems** (e.g. OpenClaw or other autonomous agents) 
 - **Default:** When TRACE H.Q. runs, the user sees the **home page** by default.
 - **Side menu:** The app has a side menu with an item **"Workflows"**.
 - **Selecting Workflows:** Choosing "Workflows" shows the **last viewed Project** (not a per-workflow selection). The app remembers which project was last viewed and opens that.
+- **Project selector:** The project dropdown is in the **top-right** of the Workflows view (in the board header), so it is easily accessible and does not clutter the side menu. It should look integrated with the board (e.g. same visual language as the rest of the UI).
 - **Project:** A **Project** corresponds to one row in the database **`projects`** table (e.g. mep-sentinel). It is the top-level container.
 - **Project Workflows:** A project has **1..n Project Workflows** (database **`workflows`** table). Each workflow is a role-routed, stage-based delivery pipeline; workflow names and stage counts are defined in the database (e.g. Development, Performance Testing, DevOps, Manual).
 - **One page, stacked workflows:** For the selected project, the app shows **one scrollable page** (the **project board**) on which **all of that project’s workflows are displayed one above the other** in workflow id order. Each workflow section can have a different number of stages. Think of multiple independent kanban “walls” placed on the same page, stacked vertically. The user does not switch between separate board pages; they scroll one page that contains every workflow for that project.
@@ -94,7 +95,8 @@ Integration with **agentic systems** (e.g. OpenClaw or other autonomous agents) 
 
 ## Design and UX
 
-- The app must **look, feel and operate like a modern kanban tool** (e.g. Jira, Linear, Trello). Boards with clear columns (stages), cards (stories), drag-and-drop or obvious actions to move cards, clean layout, and familiar patterns so the human owner can use it without explanation. Prioritise a professional, modern feel.
+- The app must **look, feel and operate like a modern kanban tool** (e.g. Jira, Linear, Trello). Boards with clear columns (stages), cards (stories), **drag-and-drop** and a **dropdown** to move cards, clean layout, and familiar patterns so the human owner can use it without explanation. Prioritise a professional, modern feel.
+- **Moving stories:** The user can move a story to another stage in two ways: (1) **Drag-and-drop** — drag a story card and drop it anywhere within the target stage column (including on top of another story); the story is moved to that stage according to the same transition rules. (2) **Dropdown** — use the “Move to…” dropdown on the card to select a stage. Both use the same API; the human owner can move to any stage in the workflow.
 - **Settings:** A **settings** entry (e.g. in the side menu or header) opens a settings area. Include at least:
   - **Theme:** Three options — **Light** (default), **Dark**, **Medium** (a mid/dim theme between light and dark). The chosen theme is persisted (e.g. in `localStorage`) so it survives refresh. Default to **Light** for first load.
 - Other settings (e.g. board density, date format) can be added later; theme and a recognisable settings surface are in scope for the first pass.
