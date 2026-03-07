@@ -17,6 +17,6 @@ SQL DDL for the Open Workflows / user-stories model. **Do not run these against 
 | `05_story_dependencies.sql` | `story_dependencies`, `story_related` — dependencies and related-story links |
 | `06_story_history_audit.sql` | `story_stage_history`, `story_audit_log` — append-only history and audit |
 
-**Source:** Requirements in `markdown/requirements/` (OPEN-WORKFLOWS-PROJECT.md, USER-STORY.md, USER-STORIES.md). Connection details: `markdown/database/DATABASE.md`.
+**Source:** Requirements in `markdown/requirements/foundational/` (OPEN-WORKFLOWS-PROJECT.md, USER-STORY.md, USER-STORIES.md). Connection details: `markdown/database/DATABASE.md`.
 
 **Note:** No seed data is included; tables are structure-only.

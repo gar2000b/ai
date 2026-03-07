@@ -21,13 +21,13 @@ Stories are the **single source of truth**. Workflows define allowed stage seque
 
 ## Requirements (design artifacts)
 
-Detailed behaviour and data model are defined in markdown under `markdown/requirements/`:
+Detailed behaviour and data model are defined in markdown under `markdown/requirements/foundational/`:
 
 | Document | Purpose |
 |----------|---------|
-| **OPEN-WORKFLOWS-PROJECT.md** | Workflow model, agent types, stage patterns, transition rules, and the four workflow definitions (Development, Performance, DevOps, Manual). |
-| **USER-STORY.md** | User story structure: identity, dependencies, blocking, execution state, review governance, audit log. Design principles. |
-| **USER-STORIES.md** | Example story set (S001–S010) illustrating the model across workflows and story types. |
+| **foundational/OPEN-WORKFLOWS-PROJECT.md** | Workflow model, agent types, stage patterns, transition rules, and the four workflow definitions (Development, Performance, DevOps, Manual). |
+| **foundational/USER-STORY.md** | User story structure: identity, dependencies, blocking, execution state, review governance, audit log. Design principles. |
+| **foundational/USER-STORIES.md** | Example story set (S001–S010) illustrating the model across workflows and story types. |
 
 These are design references, not machine-parsed specs. They guide tooling and evolution.
 
@@ -39,10 +39,9 @@ These are design references, not machine-parsed specs. They guide tooling and ev
 trace_hq/
 ├── README.md                 # This file
 ├── markdown/
-│   ├── requirements/        # Workflows & user story design (see above)
+│   ├── requirements/        # Requirements (see above: foundational/)
 │   ├── database/            # Database-related docs
-│   ├── implementation/      # Implementation notes
-│   └── solutions/           # Solution / design docs
+│   └── plan/               # Planning and design docs
 ├── scripts/                 # Utility scripts (e.g. DB)
 └── ...                      # Future: app code, config, etc.
 ```
