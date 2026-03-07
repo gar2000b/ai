@@ -55,8 +55,12 @@ Data scripts live in **`trace_hq/database/data/`**. Run each script from the **`
 | 1 | Add a project | [database/data/01_project_mep_sentinel.sql](../../database/data/01_project_mep_sentinel.sql) — inserts project `mep-sentinel` |
 | 2 | Add workflows and stages | [database/data/02_workflows_and_stages.sql](../../database/data/02_workflows_and_stages.sql) — inserts Development, Performance Testing, DevOps, Manual + their stages |
 | 3 | Add roles and agents | [database/data/03_roles_and_agents.sql](../../database/data/03_roles_and_agents.sql) — inserts 6 agent types (roles) + one agent per role |
+| 4 | Add user stories | [database/data/04_stories.sql](../../database/data/04_stories.sql) — inserts stories S001–S027 (requires 01, 02, 03) |
+| 5 | Add story dependencies | [database/data/05_story_dependencies.sql](../../database/data/05_story_dependencies.sql) — blocking dependencies (requires 04) |
+| 6 | Add story related links | [database/data/06_story_related.sql](../../database/data/06_story_related.sql) — non-blocking related-story links (requires 04) |
+| 7 | Add story stage history | [database/data/07_story_stage_history.sql](../../database/data/07_story_stage_history.sql) — stage transitions from USER-STORIES.md (requires 04) |
 
-*(More steps will be added as we populate stories, etc.)*
+Steps 5, 6, and 7 can be run in any order after step 4. **story_audit_log** is not seeded; the running system populates it.
 
 ## Quick reference
 
