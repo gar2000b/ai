@@ -75,11 +75,11 @@ This document outlines the **Backlog** in TRACE H.Q.: a **global** list of user 
 - **On success:** Update `stories.workflow_id`, `stories.workflow_stage_id`; insert into `story_stage_history` and optionally `story_audit_log`. Return updated story.
 - **Use in UI:** “Add to workflow” dropdown on a backlog card: pick workflow (and optionally stage); call this PATCH; then refresh backlog and/or navigate to Workflows.
 
-### 3.3 Optional: Move story to backlog (from board)
+### 3.3 Move story to backlog (from board)
 
-- **PATCH /api/stories/:storyId/workflow** with body `{ "workflow_id": null, "workflow_stage_id": null }` (or a dedicated “move to backlog” endpoint).
-- **Rules:** Only owner (current user). Update story; record in history/audit.
-- **Use in UI:** On the board, e.g. “Move to backlog” in the card’s move dropdown or a separate action. Can be a follow-up if not in first cut.
+- **PATCH /api/stories/:storyId/workflow** with body `{ "workflow_id": null, "workflow_stage_id": null }` moves the story from the board to the global backlog.
+- **Rules:** Story must be in a workflow (not already in backlog). Only owner (current user). Update story: set `workflow_id`, `workflow_stage_id`, `project_id` to NULL; set `backlog_order` so the story appears at the **front** of the backlog (top-left). Record in `story_stage_history` and `story_audit_log`.
+- **Use in UI:** On the board, the “Move to…” dropdown has **“Backlog”** as the first option after the label; selecting it calls this PATCH and refreshes the board.
 
 ---
 
@@ -146,7 +146,7 @@ This document outlines the **Backlog** in TRACE H.Q.: a **global** list of user 
 2. **API:** Implement GET /api/projects/:projectId/backlog and PATCH /api/stories/:storyId/workflow (add to workflow); ensure project_id is set when moving to workflow and validated.
 3. **Frontend:** Add Backlog to the side menu; add #/backlog view with header and project dropdown; implement backlog grid and backlog story card with “Add to workflow”; wire routing and last-viewed project.
 4. **Docs:** Update REQUIREMENTS.md, IMPLEMENTATION-PLAN.md, USER-STORY.md, DATABASE.md, and schema README as above.
-5. **Optional follow-up:** “Move to backlog” from the board (PATCH story to set workflow_id/workflow_stage_id to NULL); show “Move to backlog” in board card actions.
+5. **Optional follow-up:** (None required; “Move to backlog” from the board is implemented — see §3.3 and §9.)
 
 ---
 
@@ -171,4 +171,5 @@ Users can **reorder backlog stories** via **drag-and-drop** in the Backlog view.
 
 - **Global backlog:** Backlog is **not** project-scoped. **GET /api/backlog** returns all stories where `workflow_id` IS NULL (no project filter). **PUT /api/backlog/order** applies to the full backlog list. Migration **`04d_global_backlog.sql`**: makes `project_id` nullable; sets `project_id` = NULL for all current backlog stories; index changed to `(workflow_id, backlog_order)`.
 - **Add to any workflow:** **GET /api/projects-with-workflows** returns all projects with nested workflows (each workflow has `id`, `name`, `firstStageId`). The “Add to workflow” dropdown is built with **optgroups** by project (e.g. “mep-sentinel” with options Development, Performance Testing, DevOps, Manual). Only workflow options are selectable; selecting one calls **PATCH /api/stories/:id/workflow** with that workflow’s id and first stage id. The API allows **any** workflow (removed same-project check); on success it sets `story.project_id = workflow.project_id`.
+- **Move to backlog (from board):** On the Workflows board, each story card’s “Move to…” dropdown has **“Backlog”** as the first option. Selecting it calls **PATCH /api/stories/:id/workflow** with `workflow_id: null, workflow_stage_id: null`; the story is moved to the global backlog and appears at the **front** (top-left). The board view refreshes.
 - **Docs:** REQUIREMENTS.md (Backlog), DATABASE.md, IMPLEMENTATION-PLAN.md, this file.

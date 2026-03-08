@@ -10,7 +10,7 @@ The **Workflows** section is a multi-agent kanban-style system. Multiple agents 
 
 ### In a nutshell
 
-- **Workflows** = delivery pipelines, each represented as a board. A project contains one or more workflows (e.g. Development, Performance Testing, DevOps, Manual).
+- **Workflows** = delivery pipelines, each represented as a board. A project contains one or more workflows (e.g. Development, Performance Testing, DevOps, Manual). From the board, stories can be **moved back to the backlog** via the “Move to…” dropdown (first option: Backlog).
 - **Backlog** = global list of stories not yet in any workflow (not tied to a project). Stories can be moved from the backlog onto **any project’s workflow** via “Add to workflow” (dropdown grouped by project). Backlog order is **reordered by drag-and-drop** and persisted.
 - **User stories** = units of work with a stable identity. A story is either in a workflow (on a project board; then it belongs to that project) or in the global backlog (no project). Stories in a workflow carry execution state: current stage, assignee, dependencies, blocking, branch/PR/artifact tracking, and an audit trail.
 - **Agents** = role-based workers who move stories forward one stage at a time. The **owner** is the governance authority and can move any story to any stage.

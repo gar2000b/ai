@@ -321,12 +321,74 @@ router.patch('/stories/:storyId/stage', async (req, res) => {
   }
 });
 
-// ----- PATCH /api/stories/:storyId/workflow (add to workflow / move from backlog) -----
+// ----- PATCH /api/stories/:storyId/workflow (add to workflow / move to backlog) -----
 router.patch('/stories/:storyId/workflow', async (req, res) => {
   const storyId = (req.params.storyId || '').trim();
-  const workflowId = req.body && req.body.workflow_id != null ? parseInt(req.body.workflow_id, 10) : null;
-  const stageId = req.body && req.body.workflow_stage_id != null ? parseInt(req.body.workflow_stage_id, 10) : null;
-  if (!storyId || Number.isNaN(workflowId) || Number.isNaN(stageId)) return sendError(res, 400, 'Missing or invalid story id, workflow_id, or workflow_stage_id');
+  const bodyWorkflowId = req.body && req.body.workflow_id;
+  const bodyStageId = req.body && req.body.workflow_stage_id;
+  const moveToBacklog = (bodyWorkflowId == null && bodyStageId == null);
+  const workflowId = !moveToBacklog && bodyWorkflowId != null ? parseInt(bodyWorkflowId, 10) : null;
+  const stageId = !moveToBacklog && bodyStageId != null ? parseInt(bodyStageId, 10) : null;
+
+  if (!storyId) return sendError(res, 400, 'Missing story id');
+
+  if (moveToBacklog) {
+    const conn = await pool.getConnection();
+    try {
+      const [storyRows] = await conn.query(
+        'SELECT id, workflow_id, workflow_stage_id FROM stories WHERE id = ?',
+        [storyId]
+      );
+      const story = storyRows[0];
+      if (!story) {
+        sendError(res, 404, 'Story not found');
+        return;
+      }
+      if (story.workflow_id == null) {
+        sendError(res, 400, 'Story is already in the backlog');
+        return;
+      }
+      const [stageRows] = await conn.query(
+        'SELECT stage_name FROM workflow_stages WHERE id = ?',
+        [story.workflow_stage_id]
+      );
+      const fromStageName = stageRows[0] ? stageRows[0].stage_name : null;
+      const ownerId = await getOwnerAgentId();
+      if (!ownerId) {
+        sendError(res, 500, 'Owner agent not found');
+        return;
+      }
+      // Shift existing backlog stories up so we can put the new one at 0 (front). backlog_order is UNSIGNED so we never use negatives.
+      await conn.query(
+        'UPDATE stories SET backlog_order = backlog_order + 10 WHERE workflow_id IS NULL'
+      );
+      await conn.query(
+        'UPDATE stories SET workflow_id = NULL, workflow_stage_id = NULL, project_id = NULL, backlog_order = 0, last_updated_at = CURRENT_TIMESTAMP(3) WHERE id = ?',
+        [storyId]
+      );
+      await conn.query(
+        `INSERT INTO story_stage_history (story_id, from_stage_name, to_stage_name, from_workflow_stage_id, to_workflow_stage_id, assignee_id, changed_by_agent_id)
+         VALUES (?, ?, 'Backlog', ?, NULL, (SELECT assignee_id FROM stories WHERE id = ?), ?)`,
+        [storyId, fromStageName, story.workflow_stage_id, storyId, ownerId]
+      );
+      await conn.query(
+        'INSERT INTO story_audit_log (story_id, event_type, note) VALUES (?, ?, ?)',
+        [storyId, 'move_to_backlog', `${fromStageName || 'Board'} → Backlog`]
+      );
+      const [updated] = await conn.query(
+        'SELECT id, title, workflow_id, workflow_stage_id, NULL AS current_stage_name FROM stories WHERE id = ?',
+        [storyId]
+      );
+      res.json(updated[0]);
+    } catch (err) {
+      sendError(res, 500, err.message || 'Failed to move story to backlog');
+    } finally {
+      conn.release();
+    }
+    return;
+  }
+
+  if (Number.isNaN(workflowId) || Number.isNaN(stageId)) return sendError(res, 400, 'Missing or invalid workflow_id or workflow_stage_id');
 
   const conn = await pool.getConnection();
   try {

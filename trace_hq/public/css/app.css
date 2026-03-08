@@ -281,6 +281,11 @@ body {
   border-color: var(--accent);
 }
 
+.story-card.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
 .story-card[draggable="true"] {
   cursor: grab;
 }

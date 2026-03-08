@@ -61,6 +61,15 @@ function renderBacklogCard(story, projectsWithWorkflows, onAddedToWorkflow) {
     </div>
   `;
 
+  div.addEventListener('click', (e) => {
+    if (e.target.closest('.backlog-add-to-workflow')) return;
+    if (div.classList.contains('selected')) {
+      div.classList.remove('selected');
+    } else if (typeof window.TraceHqSelectCard === 'function') {
+      window.TraceHqSelectCard(div);
+    }
+  });
+
   const select = div.querySelector('.backlog-add-to-workflow');
   if (select && select.options.length > 1) {
     select.addEventListener('change', async (e) => {
