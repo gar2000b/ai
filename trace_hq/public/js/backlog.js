@@ -1,0 +1,179 @@
+/**
+ * TRACE H.Q. — Backlog: project-scoped list of stories not in a workflow.
+ * Grid layout (top-left to bottom-right); "Add to workflow" on each card.
+ */
+
+async function loadBacklog(projectId) {
+  const res = await fetch(`/api/projects/${projectId}/backlog`);
+  if (!res.ok) throw new Error('Failed to load backlog');
+  return res.json();
+}
+
+async function loadWorkflowsWithFirstStage(projectId) {
+  const res = await fetch(`/api/projects/${projectId}/workflows`);
+  if (!res.ok) throw new Error('Failed to load workflows');
+  const workflows = await res.json();
+  return workflows.map((w) => ({
+    id: w.id,
+    name: w.name,
+    firstStageId: w.stages && w.stages.length ? w.stages[0].id : null,
+  })).filter((w) => w.firstStageId);
+}
+
+function escapeHtml(s) {
+  if (s == null) return '';
+  const el = document.createElement('span');
+  el.textContent = s;
+  return el.innerHTML;
+}
+
+function renderBacklogCard(story, workflows, onAddedToWorkflow) {
+  const div = document.createElement('div');
+  div.className = 'backlog-card story-card' + (story.blocked ? ' blocked' : '');
+  div.dataset.storyId = story.id;
+  div.draggable = true;
+  div.setAttribute('draggable', 'true');
+
+  const depsText = story.dependencies && story.dependencies.length
+    ? `Blocked by ${story.dependencies.join(', ')}`
+    : '';
+  const assignee = story.assignee_name || 'Unassigned';
+
+  div.innerHTML = `
+    <div class="story-card-id">${escapeHtml(story.id)}</div>
+    <div class="story-card-title">${escapeHtml(story.title)}</div>
+    <div class="story-card-meta">${escapeHtml(assignee)}${story.priority ? ' · ' + escapeHtml(story.priority) : ''}${story.type ? ' · ' + escapeHtml(story.type) : ''}</div>
+    ${depsText ? `<div class="story-card-meta">${escapeHtml(depsText)}</div>` : ''}
+    <div class="story-card-move">
+      <select class="backlog-add-to-workflow" data-story-id="${escapeHtml(story.id)}">
+        <option value="">Add to workflow…</option>
+        ${(workflows || []).map((w) => `<option value="${w.id}" data-stage-id="${w.firstStageId}">${escapeHtml(w.name)}</option>`).join('')}
+      </select>
+    </div>
+  `;
+
+  const select = div.querySelector('.backlog-add-to-workflow');
+  if (select && select.options.length > 1) {
+    select.addEventListener('change', async (e) => {
+      const opt = e.target.options[e.target.selectedIndex];
+      const workflowId = opt.value;
+      const stageId = opt.dataset.stageId;
+      if (!workflowId || !stageId) return;
+      try {
+        const res = await fetch(`/api/stories/${story.id}/workflow`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ workflow_id: parseInt(workflowId, 10), workflow_stage_id: parseInt(stageId, 10) }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || res.statusText);
+        }
+        e.target.value = '';
+        if (typeof window.showToast === 'function') window.showToast(`Added to ${opt.text}`, 'success');
+        if (typeof onAddedToWorkflow === 'function') onAddedToWorkflow();
+      } catch (err) {
+        if (typeof window.showToast === 'function') window.showToast(err.message, 'error');
+      }
+    });
+  }
+
+  return div;
+}
+
+function renderBacklog(container, projectId) {
+  container.innerHTML = '<p class="board-loading">Loading backlog…</p>';
+  window.TraceHqBoard.setLastProjectId(projectId);
+
+  Promise.all([loadBacklog(projectId), loadWorkflowsWithFirstStage(projectId)])
+    .then(([stories, workflows]) => {
+      container.innerHTML = '';
+      if (stories.length === 0) {
+        container.innerHTML = '<p class="backlog-empty">No stories in backlog for this project.</p>';
+        return;
+      }
+      const grid = document.createElement('div');
+      grid.className = 'backlog-grid backlog-grid--sortable';
+      grid.dataset.projectId = String(projectId);
+      stories.forEach((story) => {
+        const card = renderBacklogCard(story, workflows, () => renderBacklog(container, projectId));
+        grid.appendChild(card);
+      });
+      container.appendChild(grid);
+      attachBacklogDragAndDrop(container, grid, projectId);
+    })
+    .catch((err) => {
+      container.innerHTML = `<p class="board-error">${escapeHtml(err.message)}</p>`;
+      if (typeof window.showToast === 'function') window.showToast(err.message, 'error');
+    });
+}
+
+function getBacklogOrderFromGrid(grid) {
+  const cards = grid.querySelectorAll('.backlog-card[data-story-id]');
+  return Array.from(cards).map((el) => el.dataset.storyId);
+}
+
+function attachBacklogDragAndDrop(container, grid, projectId) {
+  let draggedCard = null;
+  let dragOverCard = null;
+
+  grid.querySelectorAll('.backlog-card').forEach((card) => {
+    card.addEventListener('dragstart', (e) => {
+      draggedCard = card;
+      e.dataTransfer.setData('text/plain', card.dataset.storyId);
+      e.dataTransfer.effectAllowed = 'move';
+      card.classList.add('backlog-card--dragging');
+    });
+    card.addEventListener('dragend', () => {
+      card.classList.remove('backlog-card--dragging');
+      grid.querySelectorAll('.backlog-card').forEach((c) => c.classList.remove('backlog-card--drop-target'));
+      draggedCard = null;
+      dragOverCard = null;
+    });
+    card.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (draggedCard && card !== draggedCard) {
+        dragOverCard = card;
+        grid.querySelectorAll('.backlog-card').forEach((c) => c.classList.remove('backlog-card--drop-target'));
+        card.classList.add('backlog-card--drop-target');
+      }
+    });
+    card.addEventListener('dragleave', () => {
+      card.classList.remove('backlog-card--drop-target');
+    });
+    card.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      card.classList.remove('backlog-card--drop-target');
+      if (!draggedCard || draggedCard === card) return;
+      const orderedIds = getBacklogOrderFromGrid(grid);
+      const draggedId = draggedCard.dataset.storyId;
+      const fromIdx = orderedIds.indexOf(draggedId);
+      const toIdx = orderedIds.indexOf(card.dataset.storyId);
+      if (fromIdx === -1 || toIdx === -1) return;
+      orderedIds.splice(fromIdx, 1);
+      orderedIds.splice(toIdx, 0, draggedId);
+      try {
+        const res = await fetch(`/api/projects/${projectId}/backlog/order`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderedStoryIds: orderedIds }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || res.statusText);
+        }
+        if (typeof window.showToast === 'function') window.showToast('Backlog order saved', 'success');
+        renderBacklog(container, projectId);
+      } catch (err) {
+        if (typeof window.showToast === 'function') window.showToast(err.message, 'error');
+      }
+    });
+  });
+}
+
+window.TraceHqBacklog = {
+  loadBacklog,
+  loadWorkflowsWithFirstStage,
+  renderBacklog,
+};

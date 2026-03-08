@@ -260,3 +260,13 @@ These can be deferred to a follow-up if the first draft focuses on read + move o
 - **Agentic integration** — Keep transition rules and stage_role; integrate with external agents later without changing core model.
 
 This implementation plan is the first draft; it can be updated as requirements or design evolve. When you ask to “run” this plan, execute the phases above in order to produce the first working version of TRACE H.Q.
+
+---
+
+## 12. Backlog
+
+The **Backlog** is a project-scoped list of stories not yet assigned to any workflow. Full implementation details are in **[BACKLOG-IMPLEMENTATION-PLAN.md](BACKLOG-IMPLEMENTATION-PLAN.md)**. Summary:
+
+- **Database:** `stories.project_id` (required) so each story belongs to a project; when `workflow_id` is NULL, the story is in that project’s backlog. **`stories.backlog_order`** (INT UNSIGNED NULL) stores user-defined display order. Migrations: `04a_stories_project_id.sql`, `04c_backlog_order.sql` for existing DBs; seed `04b_backlog_stories.sql` for sample backlog stories.
+- **API:** GET `/api/projects/:projectId/backlog` (ordered by `backlog_order`, then id); PUT `/api/projects/:projectId/backlog/order` (body `{ orderedStoryIds: [] }`) to persist reorder; PATCH `/api/stories/:storyId/workflow` (add story to a workflow, moving it off the backlog).
+- **UI:** Side menu item **Backlog** (between Workflows and Settings); Backlog view with project dropdown (top right) and a **grid** of backlog story cards (top-left to bottom-right). Cards are **draggable** to reorder; order is persisted. Each card has **“Add to workflow…”** to move the story onto the board.

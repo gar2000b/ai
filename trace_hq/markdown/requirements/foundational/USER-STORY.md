@@ -10,8 +10,9 @@ It is a design reference to guide tooling and system evolution.
 A User Story:
 
 - Represents a unit of work
+- **Belongs to a project** (so it can appear in that project’s backlog when not in a workflow)
 - Maintains identity independent of workflow definitions
-- Is linked to at most one workflow
+- Is linked to at most one workflow (or none; then it is in the project’s **backlog**)
 - Stores its own execution state
 - May depend on other stories
 - May be blocked
@@ -44,7 +45,7 @@ Reverse dependency relationships are derived by the system.
   development | performance | devops | manual | -
 
   Represents the workflow this story belongs to.  
-  "-" means not yet assigned to a workflow.
+  "-" means not yet assigned to a workflow; the story then appears only in the **project’s backlog** until it is added to a workflow.
 
 - **createdBy:**  
   owner

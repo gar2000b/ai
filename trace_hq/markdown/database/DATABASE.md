@@ -41,6 +41,9 @@ The script loads `trace_hq/.env`, writes a temporary MySQL `[client]` config fil
 
 Table definitions (DDL only, no data) live in **`trace_hq/database/schema/`** as numbered `.sql` files. Apply in order (`01_projects.sql` through `06_story_history_audit.sql`). See `database/schema/README.md` for a short index and requirements references. An **Entity-Relationship diagram** of all tables is in `database/schema/schema-er.mmd` (Mermaid); open it in a Mermaid viewer to see table relationships. Do not execute against the database until schemas have been reviewed.
 
+- **Backlog support:** The `stories` table includes **`project_id`** (FK to `projects`). A story belongs to a project; when `workflow_id` is NULL, the story appears only in that project’s **backlog**. If your database was created before `project_id` was added, run the migration **`database/schema/04a_stories_project_id.sql`** once to add the column, backfill it, and add the index.
+- **Backlog ordering:** The `stories` table includes **`backlog_order`** (INT UNSIGNED NULL). When a story is in the backlog (`workflow_id` IS NULL), this field controls display order (lower = earlier). If your database was created before `backlog_order` was added, run the migration **`database/schema/04c_backlog_order.sql`** once.
+
 ## Populating the schema
 
 Data scripts live in **`trace_hq/database/data/`**. Run each script from the **`trace_hq`** directory. Apply steps in order when they depend on each other (e.g. project before workflows).
@@ -59,8 +62,9 @@ Data scripts live in **`trace_hq/database/data/`**. Run each script from the **`
 | 5 | Add story dependencies | [database/data/05_story_dependencies.sql](../../database/data/05_story_dependencies.sql) — blocking dependencies (requires 04) |
 | 6 | Add story related links | [database/data/06_story_related.sql](../../database/data/06_story_related.sql) — non-blocking related-story links (requires 04) |
 | 7 | Add story stage history | [database/data/07_story_stage_history.sql](../../database/data/07_story_stage_history.sql) — stage transitions from USER-STORIES.md (requires 04) |
+| 8 | Add backlog stories (optional) | [database/data/04b_backlog_stories.sql](../../database/data/04b_backlog_stories.sql) — inserts S028–S042 (backlog-only; requires 04 and, if applicable, 04a migration) |
 
-Steps 5, 6, and 7 can be run in any order after step 4. **story_audit_log** is not seeded; the running system populates it.
+Steps 5, 6, and 7 can be run in any order after step 4. Step 8 adds sample backlog stories; run after step 4 (and after running `04a_stories_project_id.sql` if your schema predates `project_id`). **story_audit_log** is not seeded; the running system populates it.
 
 ## Quick reference
 

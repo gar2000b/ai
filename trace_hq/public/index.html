@@ -13,13 +13,14 @@
       <nav>
         <a href="#/" class="nav-item" data-route="home">Home</a>
         <a href="#/workflows" class="nav-item" data-route="workflows">Workflows</a>
+        <a href="#/backlog" class="nav-item" data-route="backlog">Backlog</a>
         <a href="#/settings" class="nav-item" data-route="settings">Settings</a>
       </nav>
     </aside>
     <main class="main-content">
       <div id="view-home" class="view hidden">
         <h1>Welcome to TRACE H.Q.</h1>
-        <p>Use the side menu to open <strong>Workflows</strong> (project board) or <strong>Settings</strong>.</p>
+        <p>Use the side menu to open <strong>Workflows</strong> (project board), <strong>Backlog</strong>, or <strong>Settings</strong>.</p>
       </div>
       <div id="view-workflows" class="view hidden">
         <header class="workflows-header">
@@ -31,6 +32,16 @@
         </header>
         <div id="board-container"></div>
       </div>
+      <div id="view-backlog" class="view hidden">
+        <header class="workflows-header">
+          <h1 class="workflows-title">Backlog</h1>
+          <div class="project-switcher project-switcher--header">
+            <label for="project-select-backlog" class="project-switcher__label">Project</label>
+            <select id="project-select-backlog" class="project-switcher__select" aria-label="Select project"></select>
+          </div>
+        </header>
+        <div id="backlog-container"></div>
+      </div>
       <div id="view-settings" class="view hidden">
         <div id="settings-container"></div>
       </div>
@@ -40,6 +51,7 @@
   <script src="/js/settings.js"></script>
   <script src="/js/story-card.js"></script>
   <script src="/js/board.js"></script>
+  <script src="/js/backlog.js"></script>
   <script src="/js/app.js"></script>
 </body>
 </html>

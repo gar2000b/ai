@@ -11,7 +11,8 @@ The **Workflows** section is a multi-agent kanban-style system. Multiple agents 
 ### In a nutshell
 
 - **Workflows** = delivery pipelines, each represented as a board. A project contains one or more workflows (e.g. Development, Performance Testing, DevOps, Manual).
-- **User stories** = units of work with a stable identity. Each story belongs to at most one workflow and carries execution state: current stage, assignee, dependencies, blocking, branch/PR/artifact tracking, and an audit trail.
+- **Backlog** = project-scoped list of stories not yet in any workflow. Stories can be moved from the backlog onto a workflow (board) via “Add to workflow.” Backlog stories can be **reordered by drag-and-drop**; order is persisted.
+- **User stories** = units of work with a stable identity. Each story belongs to a project and is either in a workflow (on the board) or in the project’s backlog. Stories in a workflow carry execution state: current stage, assignee, dependencies, blocking, branch/PR/artifact tracking, and an audit trail.
 - **Agents** = role-based workers who move stories forward one stage at a time. The **owner** is the governance authority and can move any story to any stage.
 
 ---
@@ -57,6 +58,18 @@ The **Workflows** section is a multi-agent kanban-style system. Multiple agents 
 
    The app serves both the API and the web UI on one port. Open **http://localhost:3000** in a browser to use TRACE H.Q. (Port can be overridden with the `PORT` environment variable.)
 
+5. **After pulling changes that add schema migrations** (e.g. backlog ordering)
+
+   If the codebase adds a **new migration** (e.g. `database/schema/04c_backlog_order.sql`):
+
+   - **Run the migration** from the `trace_hq` directory (only once per DB):
+
+     ```bash
+     ./scripts/mysql.sh < database/schema/04c_backlog_order.sql
+     ```
+
+   - **Restart the app** if it is already running (`npm start` again, or restart your process manager). No need to run migrations for code-only or frontend-only changes.
+
 ---
 
 ## Repo structure (high level)
@@ -94,6 +107,7 @@ trace_hq/
 | **markdown/requirements/foundational/USER-STORIES.md** | Example story set (S001–S027). |
 | **markdown/database/DATABASE.md** | Database connection and schema/data reference. |
 | **markdown/plan/IMPLEMENTATION-PLAN.md** | Detailed implementation plan (executable). |
+| **markdown/plan/BACKLOG-IMPLEMENTATION-PLAN.md** | Backlog feature: database, API, UI. |
 
 ---
 

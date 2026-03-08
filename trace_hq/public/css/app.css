@@ -315,6 +315,32 @@ body {
   border-radius: 4px;
 }
 
+/* Backlog */
+.backlog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.75rem;
+  align-content: start;
+}
+
+.backlog-card {
+  min-height: 0;
+}
+
+.backlog-card--dragging {
+  opacity: 0.6;
+  cursor: grabbing;
+}
+
+.backlog-card--drop-target {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.backlog-empty {
+  color: var(--text-muted);
+  padding: 1.5rem 0;
+}
+
 /* Settings */
 .settings-panel {
   max-width: 400px;

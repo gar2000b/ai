@@ -151,7 +151,15 @@ This document outlines how to add a **Backlog** to TRACE H.Q.: a project-scoped 
 ## 7. Out of scope for this plan
 
 - **Creating new stories** from the UI (no “Create story” in backlog yet).
-- **Reordering** backlog (e.g. drag to reorder); display order is by id or created_at only.
 - **Filtering/search** within backlog (can be added later).
 
-Once you’re happy with this plan, implementation can follow the order in §6 and reuse existing patterns (project selector, card styling, API error handling, localStorage for last project) from the Workflows feature.
+---
+
+## 8. Backlog reordering (implemented)
+
+Users can **reorder backlog stories** via **drag-and-drop** in the Backlog view. Order is persisted in **`stories.backlog_order`** and returned by GET backlog in that order.
+
+- **Database:** Column **`backlog_order`** INT UNSIGNED NULL on `stories` (only used when `workflow_id` IS NULL). Migration: **`database/schema/04c_backlog_order.sql`**. New installs: **`04_stories.sql`** includes the column.
+- **API:** **PUT /api/projects/:projectId/backlog/order** — body `{ "orderedStoryIds": ["S028", "S030", "S029", ...] }`. Updates `backlog_order` for each story (0, 10, 20, …). All ids must be in that project’s backlog.
+- **UI:** Backlog cards are draggable; drop on another card to reorder. On drop, the app sends the new order to the API and refreshes the backlog.
+- **Docs:** REQUIREMENTS.md (Backlog), DATABASE.md, IMPLEMENTATION-PLAN.md, this file.

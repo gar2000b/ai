@@ -66,7 +66,7 @@ Integration with **agentic systems** (e.g. OpenClaw or other autonomous agents) 
 ## Workflows UI and project board
 
 - **Default:** When TRACE H.Q. runs, the user sees the **home page** by default.
-- **Side menu:** The app has a side menu with an item **"Workflows"**.
+- **Side menu:** The app has a side menu with **Home**, **Workflows**, **Backlog**, and **Settings**.
 - **Selecting Workflows:** Choosing "Workflows" shows the **last viewed Project** (not a per-workflow selection). The app remembers which project was last viewed and opens that.
 - **Project selector:** The project dropdown is in the **top-right** of the Workflows view (in the board header), so it is easily accessible and does not clutter the side menu. It should look integrated with the board (e.g. same visual language as the rest of the UI).
 - **Project:** A **Project** corresponds to one row in the database **`projects`** table (e.g. mep-sentinel). It is the top-level container.
@@ -76,6 +76,15 @@ Integration with **agentic systems** (e.g. OpenClaw or other autonomous agents) 
   - **Project board** = this single page for a project: the view that contains all workflows for that project. It is the “board” you see when you open Workflows for a project.
   - **Workflow section** = each vertical block on that page: one kanban-style area per workflow (stages as columns, stories as cards). So one project board is made of multiple workflow sections (one per project workflow), stacked in id order.
 - **Creating a new workflow** adds a new workflow to the project (a new row in `workflows` and its stages); the project board then shows one more workflow section (in id order). Creating a **new project** adds a new project; when the user switches to it (or views it for the first time), that project’s board is shown as above.
+
+### Backlog
+
+- **Backlog** is a **project-scoped** list of user stories that are **not assigned to any workflow** (they appear only in the Backlog view, not on the project board).
+- **Side menu:** The app has a **Backlog** item (between Workflows and Settings). Choosing it opens the Backlog view for the **last viewed project** (same project selector pattern as Workflows).
+- **Backlog view:** Title “Backlog” on the left, **project dropdown on the top right**. Stories are displayed in a **grid**: top-left to bottom-right (e.g. several cards per row, then the next row). Each card shows story id, title, type, priority, assignee, and any blocked/dependency info.
+- **Backlog order:** The user can **reorder** backlog stories by **drag-and-drop**. Order is persisted in the database (`stories.backlog_order`) and survives refresh. New backlog stories get a default order until the user reorders.
+- **Add to workflow:** Each backlog story card has an **“Add to workflow…”** control. The user selects a workflow (e.g. Development, Manual); the story is then added to that workflow’s first stage (e.g. Todo) and appears on the project board. The story is removed from the backlog.
+- **Data model:** Stories have a **project** (`project_id`). When `workflow_id` is NULL, the story is in that project’s backlog; **`backlog_order`** (INT UNSIGNED NULL) defines display order. When `workflow_id` is set, the story is on the board in that workflow.
 
 ---
 

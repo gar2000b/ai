@@ -47,8 +47,10 @@ erDiagram
     varchar title
     varchar type
     varchar priority
+    int project_id FK
     int workflow_id FK
     int workflow_stage_id FK
+    int backlog_order
     int created_by_agent_id FK
     int assignee_id FK
     boolean blocked
@@ -90,6 +92,7 @@ erDiagram
   }
 
   projects ||--o{ workflows : "has"
+  projects ||--o{ stories : "has"
   workflows ||--o{ workflow_stages : "has stages"
   roles ||--o{ agents : "has"
   workflows ||--o{ stories : "assigns"

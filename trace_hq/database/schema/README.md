@@ -13,7 +13,9 @@ SQL DDL for the Open Workflows / user-stories model. **Do not run these against 
 | `01_projects.sql` | `projects` — workflow project container |
 | `02_workflows.sql` | `workflows`, `workflow_stages` — pipelines and stage definitions |
 | `03_roles_agents.sql` | `roles`, `agents` — system roles and assignable agents |
-| `04_stories.sql` | `stories` — user stories (single source of truth) |
+| `04_stories.sql` | `stories` — user stories (single source of truth; includes `project_id` for backlog, `backlog_order` for backlog order) |
+| `04a_stories_project_id.sql` | **Migration:** add `project_id` to existing `stories` table (run only on DBs created before `project_id` was added) |
+| `04c_backlog_order.sql` | **Migration:** add `backlog_order` to `stories` for user-defined backlog ordering (run only on DBs created before `backlog_order` was added) |
 | `05_story_dependencies.sql` | `story_dependencies`, `story_related` — dependencies and related-story links |
 | `06_story_history_audit.sql` | `story_stage_history`, `story_audit_log` — append-only history and audit |
 

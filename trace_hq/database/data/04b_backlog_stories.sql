@@ -1,0 +1,57 @@
+-- ---------------------------------------------------------------------------
+-- Data: Insert backlog-only user stories (S028–S042)
+-- Run from trace_hq:  ./scripts/mysql.sh < database/data/04b_backlog_stories.sql
+-- Requires: 01, 02, 03, 04, 04a (migration) applied. Stories table must have project_id.
+-- ---------------------------------------------------------------------------
+
+INSERT INTO `stories` (
+  `id`, `title`, `description`, `type`, `priority`, `project_id`, `workflow_id`, `workflow_stage_id`,
+  `created_by_agent_id`, `created_at`, `last_updated_at`, `blocked`, `blocked_reason`, `blocked_at`, `blocked_by`,
+  `assignee_id`, `acceptance_criteria`, `implementation_notes`, `branch`, `review_reference`, `artifact`,
+  `review_status`, `review_notes`, `rejection_count`
+) VALUES
+('S028', 'Refactor auth middleware', 'Extract and simplify authentication middleware for reuse.', 'dev', 'medium', 1, NULL, NULL,
+ (SELECT id FROM agents WHERE name = 'owner'), NOW(3), NOW(3), 0, NULL, NULL, NULL,
+ NULL, NULL, NULL, NULL, NULL, NULL, 'not-required', NULL, 0),
+('S029', 'Add request ID to logs', 'Include correlation ID in all request logs.', 'dev', 'low', 1, NULL, NULL,
+ (SELECT id FROM agents WHERE name = 'owner'), NOW(3), NOW(3), 0, NULL, NULL, NULL,
+ NULL, NULL, NULL, NULL, NULL, NULL, 'not-required', NULL, 0),
+('S030', 'Document deployment runbook', 'Write step-by-step runbook for production deployment.', 'docs', 'high', 1, NULL, NULL,
+ (SELECT id FROM agents WHERE name = 'owner'), NOW(3), NOW(3), 0, NULL, NULL, NULL,
+ NULL, NULL, NULL, NULL, NULL, NULL, 'not-required', NULL, 0),
+('S031', 'Evaluate feature flags library', 'Research and recommend a feature-flag solution.', 'research', 'medium', 1, NULL, NULL,
+ (SELECT id FROM agents WHERE name = 'owner'), NOW(3), NOW(3), 0, NULL, NULL, NULL,
+ NULL, NULL, NULL, NULL, NULL, NULL, 'not-required', NULL, 0),
+('S032', 'Add database connection pooling config', 'Make pool size and timeouts configurable.', 'infrastructure', 'medium', 1, NULL, NULL,
+ (SELECT id FROM agents WHERE name = 'owner'), NOW(3), NOW(3), 0, NULL, NULL, NULL,
+ NULL, NULL, NULL, NULL, NULL, NULL, 'not-required', NULL, 0),
+('S033', 'Smoke tests for critical paths', 'Add minimal smoke tests for login and core API.', 'dev', 'high', 1, NULL, NULL,
+ (SELECT id FROM agents WHERE name = 'owner'), NOW(3), NOW(3), 0, NULL, NULL, NULL,
+ NULL, NULL, NULL, NULL, NULL, NULL, 'not-required', NULL, 0),
+('S034', 'Upgrade Node to LTS', 'Bump Node version and update CI to use it.', 'infrastructure', 'low', 1, NULL, NULL,
+ (SELECT id FROM agents WHERE name = 'owner'), NOW(3), NOW(3), 0, NULL, NULL, NULL,
+ NULL, NULL, NULL, NULL, NULL, NULL, 'not-required', NULL, 0),
+('S035', 'Add health check for downstream services', 'Extend /health to report status of DB and cache.', 'dev', 'medium', 1, NULL, NULL,
+ (SELECT id FROM agents WHERE name = 'owner'), NOW(3), NOW(3), 0, NULL, NULL, NULL,
+ NULL, NULL, NULL, NULL, NULL, NULL, 'not-required', NULL, 0),
+('S036', 'Spike: GraphQL vs REST for mobile', 'Short spike comparing GraphQL and REST for mobile clients.', 'research', 'low', 1, NULL, NULL,
+ (SELECT id FROM agents WHERE name = 'owner'), NOW(3), NOW(3), 0, NULL, NULL, NULL,
+ NULL, NULL, NULL, NULL, NULL, NULL, 'not-required', NULL, 0),
+('S037', 'Improve error messages for validation', 'Return clearer validation errors in API responses.', 'dev', 'medium', 1, NULL, NULL,
+ (SELECT id FROM agents WHERE name = 'owner'), NOW(3), NOW(3), 0, NULL, NULL, NULL,
+ NULL, NULL, NULL, NULL, NULL, NULL, 'not-required', NULL, 0),
+('S038', 'Add rate limiting to public endpoints', 'Implement rate limiting for unauthenticated routes.', 'dev', 'high', 1, NULL, NULL,
+ (SELECT id FROM agents WHERE name = 'owner'), NOW(3), NOW(3), 0, NULL, NULL, NULL,
+ NULL, NULL, NULL, NULL, NULL, NULL, 'not-required', NULL, 0),
+('S039', 'Create architecture decision record template', 'Add ADR template and first ADR for tech stack.', 'docs', 'low', 1, NULL, NULL,
+ (SELECT id FROM agents WHERE name = 'owner'), NOW(3), NOW(3), 0, NULL, NULL, NULL,
+ NULL, NULL, NULL, NULL, NULL, NULL, 'not-required', NULL, 0),
+('S040', 'Benchmark API response times', 'Establish baseline latency for main endpoints.', 'performance', 'medium', 1, NULL, NULL,
+ (SELECT id FROM agents WHERE name = 'owner'), NOW(3), NOW(3), 0, NULL, NULL, NULL,
+ NULL, NULL, NULL, NULL, NULL, NULL, 'not-required', NULL, 0),
+('S041', 'Add CORS configuration', 'Configure CORS for known frontend origins.', 'infrastructure', 'medium', 1, NULL, NULL,
+ (SELECT id FROM agents WHERE name = 'owner'), NOW(3), NOW(3), 0, NULL, NULL, NULL,
+ NULL, NULL, NULL, NULL, NULL, NULL, 'not-required', NULL, 0),
+('S042', 'Document environment variables', 'List and describe all env vars in README or dedicated doc.', 'docs', 'medium', 1, NULL, NULL,
+ (SELECT id FROM agents WHERE name = 'owner'), NOW(3), NOW(3), 0, NULL, NULL, NULL,
+ NULL, NULL, NULL, NULL, NULL, NULL, 'not-required', NULL, 0);
