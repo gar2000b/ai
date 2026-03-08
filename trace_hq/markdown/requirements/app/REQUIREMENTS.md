@@ -79,12 +79,12 @@ Integration with **agentic systems** (e.g. OpenClaw or other autonomous agents) 
 
 ### Backlog
 
-- **Backlog** is a **project-scoped** list of user stories that are **not assigned to any workflow** (they appear only in the Backlog view, not on the project board).
-- **Side menu:** The app has a **Backlog** item (between Workflows and Settings). Choosing it opens the Backlog view for the **last viewed project** (same project selector pattern as Workflows).
-- **Backlog view:** Title “Backlog” on the left, **project dropdown on the top right**. Stories are displayed in a **grid**: top-left to bottom-right (e.g. several cards per row, then the next row). Each card shows story id, title, type, priority, assignee, and any blocked/dependency info.
-- **Backlog order:** The user can **reorder** backlog stories by **drag-and-drop**. Order is persisted in the database (`stories.backlog_order`) and survives refresh. New backlog stories get a default order until the user reorders.
-- **Add to workflow:** Each backlog story card has an **“Add to workflow…”** control. The user selects a workflow (e.g. Development, Manual); the story is then added to that workflow’s first stage (e.g. Todo) and appears on the project board. The story is removed from the backlog.
-- **Data model:** Stories have a **project** (`project_id`). When `workflow_id` is NULL, the story is in that project’s backlog; **`backlog_order`** (INT UNSIGNED NULL) defines display order. When `workflow_id` is set, the story is on the board in that workflow.
+- **Backlog** is a **global** list of user stories that are **not assigned to any workflow** (not tied to any project). They appear only in the Backlog view, not on any project board.
+- **Side menu:** The app has a **Backlog** item (between Workflows and Settings). Choosing it opens the Backlog view (no project selector).
+- **Backlog view:** Title “Backlog” and short subtitle. Stories are displayed in a **grid** (top-left to bottom-right). Each card shows story id, title, type, priority, assignee, and any blocked/dependency info.
+- **Backlog order:** The user can **reorder** backlog stories by **drag-and-drop**. Order is persisted in the database (`stories.backlog_order`) and survives refresh.
+- **Add to workflow:** Each backlog story card has an **“Add to workflow…”** dropdown. Options are **grouped by project** (e.g. “mep-sentinel” with workflows Development, Performance Testing, DevOps, Manual; then “another-project” with its workflows). Only **workflows** are selectable (project names are group labels). The user can send a story to **any workflow on any project**. On selection, the story is added to that workflow’s first stage and to that project; it is removed from the backlog.
+- **Data model:** When `workflow_id` is NULL, the story is in the **global backlog** and **`project_id`** is NULL. **`backlog_order`** (INT UNSIGNED NULL) defines display order. When a story is added to a workflow, `project_id` is set to that workflow’s project and `workflow_id` / `workflow_stage_id` are set.
 
 ---
 

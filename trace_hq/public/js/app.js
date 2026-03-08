@@ -50,33 +50,7 @@ function handleRoute() {
   if (route === 'backlog') {
     showView('view-backlog');
     const container = document.getElementById('backlog-container');
-    const select = document.getElementById('project-select-backlog');
-
-    window.TraceHqBoard.loadProjects()
-      .then((projects) => {
-        if (projects.length === 0) {
-          container.innerHTML = '<p>No projects found.</p>';
-          return;
-        }
-        const selectedId = window.TraceHqBoard.getLastProjectId() || projects[0].id;
-        select.innerHTML = projects.map((p) => `<option value="${p.id}" ${p.id === selectedId ? 'selected' : ''}>${escapeHtml(p.name)}</option>`).join('');
-        const selected = projects.find((p) => p.id === selectedId) || projects[0];
-        window.TraceHqBacklog.renderBacklog(container, selected.id);
-
-        if (!select._backlogChangeAttached) {
-          select._backlogChangeAttached = true;
-          select.addEventListener('change', () => {
-            const opt = select.options[select.selectedIndex];
-            const id = parseInt(opt.value, 10);
-            window.TraceHqBoard.setLastProjectId(id);
-            window.TraceHqBacklog.renderBacklog(container, id);
-          });
-        }
-      })
-      .catch((err) => {
-        container.innerHTML = '<p>' + escapeHtml(err.message) + '</p>';
-        showToast(err.message, 'error');
-      });
+    window.TraceHqBacklog.renderBacklog(container);
     return;
   }
 

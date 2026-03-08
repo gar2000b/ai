@@ -129,10 +129,8 @@ router.get('/projects/:projectId/stories', async (req, res) => {
   }
 });
 
-// ----- GET /api/projects/:projectId/backlog -----
-router.get('/projects/:projectId/backlog', async (req, res) => {
-  const projectId = parseInt(req.params.projectId, 10);
-  if (Number.isNaN(projectId)) return sendError(res, 400, 'Invalid project id');
+// ----- GET /api/backlog (global backlog; stories not in any workflow) -----
+router.get('/backlog', async (req, res) => {
   try {
     const [stories] = await pool.query(
       `SELECT s.id, s.title, s.description, s.type, s.priority, s.project_id, s.assignee_id, s.blocked, s.blocked_reason,
@@ -140,9 +138,8 @@ router.get('/projects/:projectId/backlog', async (req, res) => {
         a.name AS assignee_name
        FROM stories s
        LEFT JOIN agents a ON s.assignee_id = a.id
-       WHERE s.project_id = ? AND s.workflow_id IS NULL
-       ORDER BY COALESCE(s.backlog_order, 999999), s.id`,
-      [projectId]
+       WHERE s.workflow_id IS NULL
+       ORDER BY COALESCE(s.backlog_order, 999999), s.id`
     );
     const storyIds = stories.map((s) => s.id);
     if (storyIds.length === 0) return res.json([]);
@@ -182,30 +179,29 @@ router.get('/projects/:projectId/backlog', async (req, res) => {
   }
 });
 
-// ----- PUT /api/projects/:projectId/backlog/order (reorder backlog) -----
-router.put('/projects/:projectId/backlog/order', async (req, res) => {
-  const projectId = parseInt(req.params.projectId, 10);
+// ----- PUT /api/backlog/order (reorder global backlog) -----
+router.put('/backlog/order', async (req, res) => {
   const orderedStoryIds = req.body && Array.isArray(req.body.orderedStoryIds) ? req.body.orderedStoryIds : null;
-  if (Number.isNaN(projectId) || !orderedStoryIds || orderedStoryIds.length === 0) {
-    return sendError(res, 400, 'Invalid project id or missing orderedStoryIds array');
+  if (!orderedStoryIds || orderedStoryIds.length === 0) {
+    return sendError(res, 400, 'Missing orderedStoryIds array');
   }
   const conn = await pool.getConnection();
   try {
     const placeholders = orderedStoryIds.map(() => '?').join(',');
     const [rows] = await conn.query(
-      `SELECT id FROM stories WHERE project_id = ? AND workflow_id IS NULL AND id IN (${placeholders})`,
-      [projectId, ...orderedStoryIds]
+      `SELECT id FROM stories WHERE workflow_id IS NULL AND id IN (${placeholders})`,
+      orderedStoryIds
     );
     const validIds = new Set(rows.map((r) => r.id));
     const filteredOrder = orderedStoryIds.filter((id) => validIds.has(id));
     if (filteredOrder.length !== orderedStoryIds.length) {
       conn.release();
-      return sendError(res, 400, 'Some story ids are not in this project\'s backlog');
+      return sendError(res, 400, 'Some story ids are not in the backlog');
     }
     for (let i = 0; i < filteredOrder.length; i++) {
       await conn.query(
-        'UPDATE stories SET backlog_order = ?, last_updated_at = CURRENT_TIMESTAMP(3) WHERE id = ? AND project_id = ?',
-        [i * 10, filteredOrder[i], projectId]
+        'UPDATE stories SET backlog_order = ?, last_updated_at = CURRENT_TIMESTAMP(3) WHERE id = ? AND workflow_id IS NULL',
+        [i * 10, filteredOrder[i]]
       );
     }
     res.json({ ok: true, orderedStoryIds: filteredOrder });
@@ -213,6 +209,32 @@ router.put('/projects/:projectId/backlog/order', async (req, res) => {
     sendError(res, 500, err.message || 'Failed to reorder backlog');
   } finally {
     conn.release();
+  }
+});
+
+// ----- GET /api/projects-with-workflows (for backlog "Add to workflow" dropdown: all projects + workflows) -----
+router.get('/projects-with-workflows', async (req, res) => {
+  try {
+    const [projects] = await pool.query(
+      'SELECT id, name FROM projects ORDER BY id'
+    );
+    for (const p of projects) {
+      const [workflows] = await pool.query(
+        'SELECT id, name FROM workflows WHERE project_id = ? ORDER BY id',
+        [p.id]
+      );
+      for (const w of workflows) {
+        const [stages] = await pool.query(
+          'SELECT id FROM workflow_stages WHERE workflow_id = ? ORDER BY stage_order LIMIT 1',
+          [w.id]
+        );
+        w.firstStageId = stages[0] ? stages[0].id : null;
+      }
+      p.workflows = workflows.filter((w) => w.firstStageId != null);
+    }
+    res.json(projects);
+  } catch (err) {
+    sendError(res, 500, err.message || 'Failed to fetch projects with workflows');
   }
 });
 // ----- GET /api/agents -----
@@ -327,11 +349,6 @@ router.patch('/stories/:storyId/workflow', async (req, res) => {
       sendError(res, 400, 'Workflow not found');
       return;
     }
-    if (story.project_id !== workflow.project_id) {
-      sendError(res, 400, 'Workflow does not belong to the story\'s project');
-      return;
-    }
-
     const [stageRows] = await conn.query(
       'SELECT id, workflow_id, stage_name FROM workflow_stages WHERE id = ?',
       [stageId]
@@ -351,8 +368,8 @@ router.patch('/stories/:storyId/workflow', async (req, res) => {
     const fromStageName = story.workflow_id ? null : 'Backlog';
 
     await conn.query(
-      'UPDATE stories SET workflow_id = ?, workflow_stage_id = ?, backlog_order = NULL, last_updated_at = CURRENT_TIMESTAMP(3) WHERE id = ?',
-      [workflowId, stageId, storyId]
+      'UPDATE stories SET workflow_id = ?, workflow_stage_id = ?, project_id = ?, backlog_order = NULL, last_updated_at = CURRENT_TIMESTAMP(3) WHERE id = ?',
+      [workflowId, stageId, workflow.project_id, storyId]
     );
 
     await conn.query(

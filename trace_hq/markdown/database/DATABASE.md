@@ -41,8 +41,9 @@ The script loads `trace_hq/.env`, writes a temporary MySQL `[client]` config fil
 
 Table definitions (DDL only, no data) live in **`trace_hq/database/schema/`** as numbered `.sql` files. Apply in order (`01_projects.sql` through `06_story_history_audit.sql`). See `database/schema/README.md` for a short index and requirements references. An **Entity-Relationship diagram** of all tables is in `database/schema/schema-er.mmd` (Mermaid); open it in a Mermaid viewer to see table relationships. Do not execute against the database until schemas have been reviewed.
 
-- **Backlog support:** The `stories` table includes **`project_id`** (FK to `projects`). A story belongs to a project; when `workflow_id` is NULL, the story appears only in that project’s **backlog**. If your database was created before `project_id` was added, run the migration **`database/schema/04a_stories_project_id.sql`** once to add the column, backfill it, and add the index.
-- **Backlog ordering:** The `stories` table includes **`backlog_order`** (INT UNSIGNED NULL). When a story is in the backlog (`workflow_id` IS NULL), this field controls display order (lower = earlier). If your database was created before `backlog_order` was added, run the migration **`database/schema/04c_backlog_order.sql`** once.
+- **Backlog support:** The `stories` table includes **`project_id`** (FK to `projects`, **nullable**). When a story is in a workflow, `project_id` is set to that workflow’s project. When `workflow_id` is NULL, the story is in the **global backlog** and `project_id` is NULL. If your database was created before `project_id` was added, run **`database/schema/04a_stories_project_id.sql`** once.
+- **Global backlog:** Run **`database/schema/04d_global_backlog.sql`** to make `project_id` nullable and treat backlog as global (no project filter). Existing backlog stories get `project_id` set to NULL.
+- **Backlog ordering:** The `stories` table includes **`backlog_order`** (INT UNSIGNED NULL). When a story is in the backlog (`workflow_id` IS NULL), this field controls display order (lower = earlier). Migration **`database/schema/04c_backlog_order.sql`** adds it if missing.
 
 ## Populating the schema
 

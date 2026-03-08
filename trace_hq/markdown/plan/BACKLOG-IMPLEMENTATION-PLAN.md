@@ -1,16 +1,18 @@
 # Backlog — Implementation plan
 
-This document outlines how to add a **Backlog** to TRACE H.Q.: a project-scoped list of user stories that are not yet assigned to any workflow. It covers database changes, API, UI, and doc updates. Review this plan before implementation.
+This document outlines the **Backlog** in TRACE H.Q.: a **global** list of user stories that are not yet assigned to any workflow (not tied to any project). It covers database changes, API, UI, and doc updates.
+
+**Update (global backlog):** Backlog is no longer project-scoped. Stories in backlog have `project_id` NULL. “Add to workflow” allows sending a story to **any workflow on any project**; the dropdown is grouped by project (project name as label, workflows as selectable options).
 
 ---
 
 ## 1. Definition
 
-- **Backlog** = the set of user stories that **belong to a project** but are **not assigned to any workflow** (i.e. not on any board column).
+- **Backlog** = the set of user stories that are **not assigned to any workflow** (i.e. not on any board column). They are **not tied to a project**; `project_id` is NULL.
 - A story is either:
-  - **In a workflow** → it appears on the project board in one of that workflow’s stages, or
-  - **In the project’s backlog** → it appears only in the Backlog view for that project.
-- So every story must be associated with a **project**. Today stories are linked only via `workflow_id` (workflow → project); we need a direct **story → project** link so that when `workflow_id` is NULL we still know which project’s backlog the story is in.
+  - **In a workflow** → it appears on that project’s board; `project_id` is set to the workflow’s project, or
+  - **In the global backlog** → it appears only in the Backlog view; `project_id` is NULL.
+- When a story is added to a workflow (from the backlog), the app sets `project_id` to that workflow’s project.
 
 ---
 
@@ -159,7 +161,14 @@ This document outlines how to add a **Backlog** to TRACE H.Q.: a project-scoped 
 
 Users can **reorder backlog stories** via **drag-and-drop** in the Backlog view. Order is persisted in **`stories.backlog_order`** and returned by GET backlog in that order.
 
-- **Database:** Column **`backlog_order`** INT UNSIGNED NULL on `stories` (only used when `workflow_id` IS NULL). Migration: **`database/schema/04c_backlog_order.sql`**. New installs: **`04_stories.sql`** includes the column.
-- **API:** **PUT /api/projects/:projectId/backlog/order** — body `{ "orderedStoryIds": ["S028", "S030", "S029", ...] }`. Updates `backlog_order` for each story (0, 10, 20, …). All ids must be in that project’s backlog.
+- **Database:** Column **`backlog_order`** INT UNSIGNED NULL on `stories` (only used when `workflow_id` IS NULL). Migration: **`database/schema/04c_backlog_order.sql`**. Index **`ix_stories_backlog_order`** on `(workflow_id, backlog_order)` (see §9).
+- **API:** **PUT /api/backlog/order** — body `{ "orderedStoryIds": ["S028", "S030", ...] }`. Updates `backlog_order` for each story. All ids must be in the global backlog (`workflow_id` IS NULL).
 - **UI:** Backlog cards are draggable; drop on another card to reorder. On drop, the app sends the new order to the API and refreshes the backlog.
+
+---
+
+## 9. Global backlog and “Add to any workflow” (implemented)
+
+- **Global backlog:** Backlog is **not** project-scoped. **GET /api/backlog** returns all stories where `workflow_id` IS NULL (no project filter). **PUT /api/backlog/order** applies to the full backlog list. Migration **`04d_global_backlog.sql`**: makes `project_id` nullable; sets `project_id` = NULL for all current backlog stories; index changed to `(workflow_id, backlog_order)`.
+- **Add to any workflow:** **GET /api/projects-with-workflows** returns all projects with nested workflows (each workflow has `id`, `name`, `firstStageId`). The “Add to workflow” dropdown is built with **optgroups** by project (e.g. “mep-sentinel” with options Development, Performance Testing, DevOps, Manual). Only workflow options are selectable; selecting one calls **PATCH /api/stories/:id/workflow** with that workflow’s id and first stage id. The API allows **any** workflow (removed same-project check); on success it sets `story.project_id = workflow.project_id`.
 - **Docs:** REQUIREMENTS.md (Backlog), DATABASE.md, IMPLEMENTATION-PLAN.md, this file.
