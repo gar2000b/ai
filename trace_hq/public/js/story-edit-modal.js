@@ -251,7 +251,8 @@ function getSelectedStoryId() {
 function initEditStoryOnKeyE() {
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'e' && e.key !== 'E') return;
-    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT')) return;
+    if (document.getElementById('create-project-overlay') || document.getElementById('story-create-overlay') || document.getElementById('story-edit-overlay')) return;
+    if (e.target && (e.target.closest('#create-project-overlay') || e.target.closest('#story-create-overlay') || e.target.closest('#story-edit-overlay'))) return;
     const storyId = getSelectedStoryId();
     if (!storyId) return;
     e.preventDefault();

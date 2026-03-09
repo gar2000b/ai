@@ -155,13 +155,17 @@ All API responses should be JSON. Use consistent error responses (e.g. 4xx/5xx w
 - **POST /api/stories** — Create a new story. Body: `title` (required), `type`, `priority`, `placement` (either `"backlog"` or `{ workflow_id, workflow_stage_id }`), plus optional fields (description, assignee_id, blocked, blocked_reason, blocked_by, acceptance_criteria, implementation_notes, branch, review_reference, artifact, review_status, review_notes, rejection_count, dependencies[], related[]). ID is auto-generated (next S###) unless provided. On success: 201 and created story.
 - **UI:** From Workflows or Backlog, pressing **C** opens the create-story modal. Placement dropdown at top: first option **Backlog**, then optgroups by project with workflows (same as “Add to workflow…”). Form fields mirror edit-story modal. Create and Cancel buttons.
 
-### 3.7 Optional: create project / create workflow
+### 3.7 Create project
 
-- If time permits in the first draft:
-  - **POST /api/projects** — create a new project (name); return new project.
+- **POST /api/projects** — Create a new project. Body: `{ "name": "<project name>" }`. Returns 201 and the new project (id, name, created_at, updated_at). The project has no workflows initially.
+- **UI:** On the Workflows page, a **“Create Project”** button appears to the right of the project dropdown; pressing **P** on the Workflows view also opens the same modal. The modal has a single field “Project name” and **Create** / **Cancel** buttons. On Create, the project is created and the board refreshes with the new project selected (empty until workflows are added). Modal closes on Create, Cancel, X, or Escape; does not close when clicking outside. **Whilst any of the create-story (C), edit-story (E), or create-project (P) modals are open, C, E, and P key events are ignored** so users can type those letters in form fields.
+
+### 3.8 Optional: create workflow
+
+- If time permits:
   - **POST /api/projects/:projectId/workflows** — create a new workflow (code, name, description) and its stages (e.g. standard pattern: Todo, Planning, In Progress, Review, Done with appropriate stage_role). Then the project board shows one more workflow section.
 
-These can be deferred to a follow-up if the first draft focuses on read + move only.
+Can be deferred to a follow-up.
 
 ---
 

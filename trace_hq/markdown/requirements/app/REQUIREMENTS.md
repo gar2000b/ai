@@ -75,7 +75,8 @@ Integration with **agentic systems** (e.g. OpenClaw or other autonomous agents) 
 - **Terminology:**
   - **Project board** = this single page for a project: the view that contains all workflows for that project. It is the “board” you see when you open Workflows for a project.
   - **Workflow section** = each vertical block on that page: one kanban-style area per workflow (stages as columns, stories as cards). So one project board is made of multiple workflow sections (one per project workflow), stacked in id order.
-- **Creating a new workflow** adds a new workflow to the project (a new row in `workflows` and its stages); the project board then shows one more workflow section (in id order). Creating a **new project** adds a new project; when the user switches to it (or views it for the first time), that project’s board is shown as above.
+- **Creating a new workflow** adds a new workflow to the project (a new row in `workflows` and its stages); the project board then shows one more workflow section (in id order). **Creating a new project:** A **“Create Project”** button appears to the right of the project dropdown on the Workflows page; pressing **P** on the Workflows view also opens the same modal. The modal prompts for the new project name; the user enters the name and clicks **Create** or **Cancel**. The new project is created with no workflows initially; when selected, the board is empty until workflows are added.
+- **Keyboard shortcuts and modals:** Whilst any of the create-story (C), edit-story (E), or create-project (P) modals are open, **C**, **E**, and **P** key events are ignored so users can type those letters in form fields without triggering the shortcuts.
 
 ### Backlog
 

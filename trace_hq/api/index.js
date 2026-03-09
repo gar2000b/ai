@@ -36,6 +36,25 @@ router.get('/projects', async (req, res) => {
   }
 });
 
+// ----- POST /api/projects (create empty project) -----
+router.post('/projects', async (req, res) => {
+  const name = (req.body && req.body.name && String(req.body.name).trim()) || null;
+  if (!name) return sendError(res, 400, 'Project name is required');
+  try {
+    const [result] = await pool.query(
+      'INSERT INTO projects (name) VALUES (?)',
+      [name]
+    );
+    const [rows] = await pool.query(
+      'SELECT id, name, created_at, updated_at FROM projects WHERE id = ?',
+      [result.insertId]
+    );
+    res.status(201).json(rows[0]);
+  } catch (err) {
+    sendError(res, 500, err.message || 'Failed to create project');
+  }
+});
+
 // ----- GET /api/projects/:projectId/workflows -----
 router.get('/projects/:projectId/workflows', async (req, res) => {
   const projectId = parseInt(req.params.projectId, 10);

@@ -25,9 +25,12 @@
       <div id="view-workflows" class="view hidden">
         <header class="workflows-header">
           <h1 class="workflows-title">Project board</h1>
-          <div class="project-switcher project-switcher--header">
-            <label for="project-select" class="project-switcher__label">Project</label>
-            <select id="project-select" class="project-switcher__select" aria-label="Select project"></select>
+          <div class="workflows-header-actions">
+            <div class="project-switcher project-switcher--header">
+              <label for="project-select" class="project-switcher__label">Project</label>
+              <select id="project-select" class="project-switcher__select" aria-label="Select project"></select>
+            </div>
+            <button type="button" id="create-project-btn" class="btn-create-project">Create Project</button>
           </div>
         </header>
         <div id="board-container"></div>
