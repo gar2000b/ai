@@ -249,6 +249,286 @@ router.get('/agents', async (req, res) => {
   }
 });
 
+// ----- GET /api/stories/next-id (suggested id for new story, e.g. S043) -----
+router.get('/stories/next-id', async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT id FROM stories WHERE id REGEXP '^S[0-9]+$' ORDER BY CAST(SUBSTRING(id, 2) AS UNSIGNED) DESC LIMIT 1`
+    );
+    const nextNum = rows[0] ? parseInt(rows[0].id.slice(1), 10) + 1 : 1;
+    const nextId = 'S' + String(nextNum).padStart(3, '0');
+    res.json({ nextId });
+  } catch (err) {
+    sendError(res, 500, err.message || 'Failed to get next story id');
+  }
+});
+
+// ----- POST /api/stories (create story; placement: backlog or workflow) -----
+router.post('/stories', async (req, res) => {
+  const body = req.body || {};
+  const title = (body.title && String(body.title).trim()) || null;
+  const type = (body.type && String(body.type).trim()) || 'dev';
+  const priority = (body.priority && String(body.priority).trim()) || 'medium';
+  if (!title) return sendError(res, 400, 'Title is required');
+
+  const placement = body.placement;
+  const toBacklog = placement === 'backlog' || (placement && placement.backlog === true);
+  const workflowId = placement && placement.workflow_id != null ? parseInt(placement.workflow_id, 10) : null;
+  const workflowStageId = placement && placement.workflow_stage_id != null ? parseInt(placement.workflow_stage_id, 10) : null;
+
+  const conn = await pool.getConnection();
+  try {
+    const [idRows] = await conn.query(
+      `SELECT id FROM stories WHERE id REGEXP '^S[0-9]+$' ORDER BY CAST(SUBSTRING(id, 2) AS UNSIGNED) DESC LIMIT 1`
+    );
+    const nextNum = idRows[0] ? parseInt(idRows[0].id.slice(1), 10) + 1 : 1;
+    const id = body.id && String(body.id).trim() ? String(body.id).trim() : 'S' + String(nextNum).padStart(3, '0');
+
+    const [existing] = await conn.query('SELECT id FROM stories WHERE id = ?', [id]);
+    if (existing.length) return sendError(res, 400, 'Story id already exists: ' + id);
+
+    let projectId = null;
+    let wfId = null;
+    let wfStageId = null;
+    let backlogOrder = null;
+
+    if (toBacklog || (!workflowId && !workflowStageId)) {
+      const [maxOrder] = await conn.query(
+        'SELECT COALESCE(MAX(backlog_order), 0) + 10 AS n FROM stories WHERE workflow_id IS NULL'
+      );
+      backlogOrder = maxOrder[0].n;
+    } else if (workflowId && workflowStageId) {
+      const [wf] = await conn.query('SELECT id, project_id FROM workflows WHERE id = ?', [workflowId]);
+      if (!wf.length) {
+        sendError(res, 400, 'Workflow not found');
+        return;
+      }
+      const [stage] = await conn.query(
+        'SELECT id FROM workflow_stages WHERE workflow_id = ? AND id = ?',
+        [workflowId, workflowStageId]
+      );
+      if (!stage.length) {
+        sendError(res, 400, 'Stage not found');
+        return;
+      }
+      projectId = wf[0].project_id;
+      wfId = workflowId;
+      wfStageId = workflowStageId;
+    }
+
+    const ownerId = await getOwnerAgentId();
+    const assigneeId = body.assignee_id === '' || body.assignee_id == null ? null : parseInt(body.assignee_id, 10);
+    const blocked = body.blocked ? 1 : 0;
+
+    await conn.query(
+      `INSERT INTO stories (
+        id, title, description, type, priority, project_id, workflow_id, workflow_stage_id, backlog_order,
+        created_by_agent_id, assignee_id, blocked, blocked_reason, blocked_by,
+        acceptance_criteria, implementation_notes, branch, review_reference, artifact,
+        review_status, review_notes, rejection_count
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id, title, body.description && String(body.description).trim() || null, type, priority,
+        projectId, wfId, wfStageId, backlogOrder,
+        ownerId, assigneeId, blocked, body.blocked_reason && String(body.blocked_reason).trim() || null,
+        body.blocked_by && String(body.blocked_by).trim() || null,
+        body.acceptance_criteria && String(body.acceptance_criteria).trim() || null,
+        body.implementation_notes && String(body.implementation_notes).trim() || null,
+        body.branch && String(body.branch).trim() || null,
+        body.review_reference && String(body.review_reference).trim() || null,
+        body.artifact && String(body.artifact).trim() || null,
+        body.review_status && String(body.review_status).trim() || 'not-required',
+        body.review_notes && String(body.review_notes).trim() || null,
+        body.rejection_count != null ? parseInt(body.rejection_count, 10) || 0 : 0
+      ]
+    );
+
+    if (wfId && wfStageId) {
+      const [stageName] = await conn.query('SELECT stage_name FROM workflow_stages WHERE id = ?', [wfStageId]);
+      await conn.query(
+        `INSERT INTO story_stage_history (story_id, from_stage_name, to_stage_name, from_workflow_stage_id, to_workflow_stage_id, assignee_id, changed_by_agent_id)
+         VALUES (?, NULL, ?, NULL, ?, ?, ?)`,
+        [id, stageName[0].stage_name, wfStageId, assigneeId, ownerId]
+      );
+      await conn.query(
+        'INSERT INTO story_audit_log (story_id, event_type, note) VALUES (?, ?, ?)',
+        [id, 'add_to_workflow', 'Created in ' + stageName[0].stage_name]
+      );
+    }
+
+    const depIds = Array.isArray(body.dependencies) ? body.dependencies.filter((d) => d && String(d).trim() && String(d).trim() !== id) : [];
+    for (const depId of depIds) {
+      const did = String(depId).trim();
+      await conn.query(
+        'INSERT IGNORE INTO story_dependencies (story_id, depends_on_story_id) VALUES (?, ?)',
+        [id, did]
+      );
+    }
+    const relatedIds = Array.isArray(body.related) ? body.related.filter((r) => r && String(r).trim() && String(r).trim() !== id) : [];
+    for (const relId of relatedIds) {
+      const rid = String(relId).trim();
+      const [s, r] = id < rid ? [id, rid] : [rid, id];
+      await conn.query(
+        'INSERT IGNORE INTO story_related (story_id, related_story_id) VALUES (?, ?)',
+        [s, r]
+      );
+    }
+
+    const [created] = await conn.query(
+      `SELECT s.id, s.title, s.type, s.priority, s.workflow_id, s.workflow_stage_id, s.project_id,
+        ws.stage_name AS current_stage_name, w.name AS workflow_name
+       FROM stories s
+       LEFT JOIN workflow_stages ws ON s.workflow_stage_id = ws.id
+       LEFT JOIN workflows w ON s.workflow_id = w.id
+       WHERE s.id = ?`,
+      [id]
+    );
+    res.status(201).json(created[0]);
+  } catch (err) {
+    sendError(res, 500, err.message || 'Failed to create story');
+  } finally {
+    conn.release();
+  }
+});
+
+// ----- GET /api/stories/:storyId (full story for edit modal) -----
+router.get('/stories/:storyId', async (req, res) => {
+  const storyId = (req.params.storyId || '').trim();
+  if (!storyId) return sendError(res, 400, 'Missing story id');
+  try {
+    const [rows] = await pool.query(
+      `SELECT s.id, s.title, s.description, s.type, s.priority, s.project_id, s.workflow_id, s.workflow_stage_id,
+        s.assignee_id, s.blocked, s.blocked_reason, s.blocked_by, s.acceptance_criteria, s.implementation_notes,
+        s.branch, s.review_reference, s.artifact, s.review_status, s.review_notes, s.rejection_count,
+        s.created_at, s.last_updated_at,
+        a.name AS assignee_name,
+        ws.stage_name AS current_stage_name, w.name AS workflow_name
+       FROM stories s
+       LEFT JOIN agents a ON s.assignee_id = a.id
+       LEFT JOIN workflow_stages ws ON s.workflow_stage_id = ws.id
+       LEFT JOIN workflows w ON s.workflow_id = w.id
+       WHERE s.id = ?`,
+      [storyId]
+    );
+    const story = rows[0];
+    if (!story) return sendError(res, 404, 'Story not found');
+
+    const [deps] = await pool.query(
+      'SELECT depends_on_story_id FROM story_dependencies WHERE story_id = ? ORDER BY depends_on_story_id',
+      [storyId]
+    );
+    const [relatedRows] = await pool.query(
+      'SELECT story_id, related_story_id FROM story_related WHERE story_id = ? OR related_story_id = ?',
+      [storyId, storyId]
+    );
+    const relatedIds = relatedRows.map((r) => (r.story_id === storyId ? r.related_story_id : r.story_id));
+
+    story.dependencies = (deps || []).map((d) => d.depends_on_story_id);
+    story.related = relatedIds;
+    res.json(story);
+  } catch (err) {
+    sendError(res, 500, err.message || 'Failed to fetch story');
+  }
+});
+
+// ----- PATCH /api/stories/:storyId (update story fields, dependencies, related) -----
+router.patch('/stories/:storyId', async (req, res) => {
+  const storyId = (req.params.storyId || '').trim();
+  if (!storyId) return sendError(res, 400, 'Missing story id');
+  const body = req.body || {};
+
+  const conn = await pool.getConnection();
+  try {
+    const [existing] = await conn.query('SELECT id FROM stories WHERE id = ?', [storyId]);
+    if (!existing.length) {
+      sendError(res, 404, 'Story not found');
+      return;
+    }
+
+    const allowed = [
+      'title', 'description', 'type', 'priority', 'assignee_id',
+      'blocked', 'blocked_reason', 'blocked_by', 'acceptance_criteria', 'implementation_notes',
+      'branch', 'review_reference', 'artifact', 'review_status', 'review_notes', 'rejection_count'
+    ];
+    const updates = [];
+    const values = [];
+    for (const key of allowed) {
+      if (!(key in body)) continue;
+      if (key === 'blocked') {
+        updates.push('`blocked` = ?');
+        values.push(body[key] ? 1 : 0);
+      } else if (key === 'assignee_id' || key === 'rejection_count') {
+        const v = body[key];
+        updates.push('`' + key + '` = ?');
+        values.push(v === '' || v === null ? null : parseInt(v, 10));
+      } else {
+        updates.push('`' + key + '` = ?');
+        values.push(body[key] === '' ? null : body[key]);
+      }
+    }
+    if (updates.length) {
+      values.push(storyId);
+      await conn.query(
+        'UPDATE stories SET ' + updates.join(', ') + ', last_updated_at = CURRENT_TIMESTAMP(3) WHERE id = ?',
+        values
+      );
+    }
+
+    if (Array.isArray(body.dependencies)) {
+      await conn.query('DELETE FROM story_dependencies WHERE story_id = ?', [storyId]);
+      const depIds = body.dependencies.filter((id) => id && String(id).trim() && String(id).trim() !== storyId);
+      for (const depId of depIds) {
+        const id = String(depId).trim();
+        if (!id) continue;
+        await conn.query(
+          'INSERT IGNORE INTO story_dependencies (story_id, depends_on_story_id) VALUES (?, ?)',
+          [storyId, id]
+        );
+      }
+    }
+    if (Array.isArray(body.related)) {
+      await conn.query(
+        'DELETE FROM story_related WHERE story_id = ? OR related_story_id = ?',
+        [storyId, storyId]
+      );
+      const relatedIds = body.related.filter((id) => id && String(id).trim() && String(id).trim() !== storyId);
+      for (const relId of relatedIds) {
+        const id = String(relId).trim();
+        if (!id) continue;
+        const [s, r] = storyId < id ? [storyId, id] : [id, storyId];
+        await conn.query(
+          'INSERT IGNORE INTO story_related (story_id, related_story_id) VALUES (?, ?)',
+          [s, r]
+        );
+      }
+    }
+
+    const [updated] = await conn.query(
+      `SELECT s.id, s.title, s.description, s.type, s.priority, s.assignee_id, s.blocked, s.blocked_reason,
+        s.review_status, s.branch, s.review_reference, s.artifact, s.review_notes, s.rejection_count,
+        a.name AS assignee_name
+       FROM stories s LEFT JOIN agents a ON s.assignee_id = a.id WHERE s.id = ?`,
+      [storyId]
+    );
+    const [deps] = await conn.query(
+      'SELECT depends_on_story_id FROM story_dependencies WHERE story_id = ? ORDER BY depends_on_story_id',
+      [storyId]
+    );
+    const [relRows] = await conn.query(
+      'SELECT story_id, related_story_id FROM story_related WHERE story_id = ? OR related_story_id = ?',
+      [storyId, storyId]
+    );
+    const out = updated[0];
+    out.dependencies = (deps || []).map((d) => d.depends_on_story_id);
+    out.related = relRows.map((r) => (r.story_id === storyId ? r.related_story_id : r.story_id));
+    res.json(out);
+  } catch (err) {
+    sendError(res, 500, err.message || 'Failed to update story');
+  } finally {
+    conn.release();
+  }
+});
+
 // ----- PATCH /api/stories/:storyId/stage -----
 router.patch('/stories/:storyId/stage', async (req, res) => {
   const storyId = (req.params.storyId || '').trim();

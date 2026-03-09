@@ -149,7 +149,13 @@ All API responses should be JSON. Use consistent error responses (e.g. 4xx/5xx w
   - Return the updated story (and possibly updated stage history) so the UI can refresh the card.
   - On validation failure (e.g. invalid transition): return 400 with a clear message.
 
-### 3.6 Optional: create project / create workflow
+### 3.6 Create story
+
+- **GET /api/stories/next-id** — Returns `{ nextId: "S043" }` (or next available S###) for the create-story modal.
+- **POST /api/stories** — Create a new story. Body: `title` (required), `type`, `priority`, `placement` (either `"backlog"` or `{ workflow_id, workflow_stage_id }`), plus optional fields (description, assignee_id, blocked, blocked_reason, blocked_by, acceptance_criteria, implementation_notes, branch, review_reference, artifact, review_status, review_notes, rejection_count, dependencies[], related[]). ID is auto-generated (next S###) unless provided. On success: 201 and created story.
+- **UI:** From Workflows or Backlog, pressing **C** opens the create-story modal. Placement dropdown at top: first option **Backlog**, then optgroups by project with workflows (same as “Add to workflow…”). Form fields mirror edit-story modal. Create and Cancel buttons.
+
+### 3.7 Optional: create project / create workflow
 
 - If time permits in the first draft:
   - **POST /api/projects** — create a new project (name); return new project.

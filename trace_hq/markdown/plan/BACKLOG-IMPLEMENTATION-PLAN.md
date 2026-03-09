@@ -103,12 +103,16 @@ This document outlines the **Backlog** in TRACE H.Q.: a **global** list of user 
 - **Show:** Story id, title, type, priority, assignee (or “Unassigned”), blocked/dependencies if any.
 - **Action:** “Add to workflow” control (e.g. dropdown or button that opens a small menu): list the **project’s workflows** (Development, Performance Testing, DevOps, Manual, etc.). On choose: call **PATCH /api/stories/:storyId/workflow** with that workflow’s id and its first stage id (Todo). Then refresh the backlog list (and optionally show a toast “Story added to [workflow name]”). If we implement “move to backlog” from the board, the same card component could be reused there with a different action.
 
-### 4.4 Routing and data
+### 4.4 Create story from Workflows or Backlog
+
+- From **Workflows** or **Backlog**, pressing the **C** key opens a **create story** modal. The modal has a **placement** dropdown at the top: **first option “Backlog”**, then the same structure as “Add to workflow…” (grouped by project, workflows as options). The rest of the form matches the edit-story modal (title, description, type, priority, assignee, blocking, dependencies, related, execution, notes). **POST /api/stories** creates the story; placement is either `"backlog"` or `{ workflow_id, workflow_stage_id }`. On success, refresh the board and/or backlog as appropriate.
+
+### 4.5 Routing and data
 
 - **app.js:** On `#/backlog`, show the Backlog view; load project list and set project dropdown; load backlog for selected project (GET /api/projects/:projectId/backlog); render grid. When project changes, reload backlog for that project. Reuse last-viewed project from localStorage so switching between Workflows and Backlog keeps the same project.
 - **New JS (e.g. `public/js/backlog.js`):** Functions to fetch backlog, render the grid, render a backlog card, and handle “Add to workflow”. Optionally share card styling with the board (e.g. same CSS class for card, different inner actions).
 
-### 4.5 Styles
+### 4.6 Styles
 
 - Reuse existing card and layout styles where possible. Add a `.backlog-grid` (or similar) for the left-to-right, top-to-bottom layout; ensure it’s responsive (e.g. min-width on cards, wrap).
 

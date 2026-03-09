@@ -98,3 +98,29 @@ function escapeHtml(s) {
 
 window.addEventListener('hashchange', handleRoute);
 window.addEventListener('load', handleRoute);
+
+document.addEventListener('keydown', function handleCreateStoryKey(e) {
+  if (e.key !== 'c' && e.key !== 'C') return;
+  if (e.ctrlKey || e.metaKey) return;
+  const hash = (window.location.hash || '#/').slice(1) || '/';
+  const path = hash.startsWith('/') ? hash : '/' + hash;
+  const route = path === '/' ? 'home' : path.slice(1).split('/')[0];
+  if (route !== 'workflows' && route !== 'backlog') return;
+  if (document.getElementById('story-create-overlay') || document.getElementById('story-edit-overlay')) return;
+  if (e.target && (e.target.closest('#story-create-overlay') || e.target.closest('#story-edit-overlay'))) return;
+  e.preventDefault();
+  if (window.TraceHqStoryCreateModal && typeof window.TraceHqStoryCreateModal.openCreateModal === 'function') {
+    window.TraceHqStoryCreateModal.openCreateModal(function onCreated() {
+      const boardContainer = document.getElementById('board-container');
+      const backlogContainer = document.getElementById('backlog-container');
+      if (boardContainer && boardContainer.querySelector('.board-section')) {
+        const select = document.getElementById('project-select');
+        if (select && select.selectedIndex >= 0) {
+          const opt = select.options[select.selectedIndex];
+          if (opt && window.TraceHqBoard) window.TraceHqBoard.renderBoard(boardContainer, parseInt(opt.value, 10), opt.text);
+        }
+      }
+      if (backlogContainer && window.TraceHqBacklog) window.TraceHqBacklog.renderBacklog(backlogContainer);
+    });
+  }
+}, true);
