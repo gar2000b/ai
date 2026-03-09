@@ -60,10 +60,22 @@ router.get('/projects/:projectId/workflows', async (req, res) => {
   const projectId = parseInt(req.params.projectId, 10);
   if (Number.isNaN(projectId)) return sendError(res, 400, 'Invalid project id');
   try {
-    const [workflows] = await pool.query(
-      'SELECT id, project_id, code, name, description, created_at, updated_at FROM workflows WHERE project_id = ? ORDER BY id',
-      [projectId]
-    );
+    let workflows;
+    try {
+      [workflows] = await pool.query(
+        'SELECT id, project_id, code, name, description, display_order, created_at, updated_at FROM workflows WHERE project_id = ? ORDER BY display_order ASC, id ASC',
+        [projectId]
+      );
+    } catch (colErr) {
+      if (colErr.code === 'ER_BAD_FIELD_ERROR' && /display_order/.test(colErr.message)) {
+        [workflows] = await pool.query(
+          'SELECT id, project_id, code, name, description, created_at, updated_at FROM workflows WHERE project_id = ? ORDER BY id',
+          [projectId]
+        );
+      } else {
+        throw colErr;
+      }
+    }
     for (const w of workflows) {
       const [stages] = await pool.query(
         'SELECT id, workflow_id, stage_order, stage_name, stage_role, created_at FROM workflow_stages WHERE workflow_id = ? ORDER BY stage_order',
@@ -100,11 +112,28 @@ router.post('/projects/:projectId/workflows', async (req, res) => {
     if (!projectRows.length) return sendError(res, 404, 'Project not found');
     const [existing] = await pool.query('SELECT id FROM workflows WHERE project_id = ? AND code = ?', [projectId, code]);
     if (existing.length) return sendError(res, 400, `A workflow with code "${code}" already exists in this project`);
-    const [insertResult] = await pool.query(
-      'INSERT INTO workflows (project_id, code, name, description) VALUES (?, ?, ?, ?)',
-      [projectId, code, name, description || null]
-    );
-    const workflowId = insertResult.insertId;
+    let workflowId;
+    try {
+      const [[{ nextOrder }]] = await pool.query(
+        'SELECT COALESCE(MAX(display_order), 0) + 1 AS nextOrder FROM workflows WHERE project_id = ?',
+        [projectId]
+      );
+      const [insertResult] = await pool.query(
+        'INSERT INTO workflows (project_id, code, name, description, display_order) VALUES (?, ?, ?, ?, ?)',
+        [projectId, code, name, description || null, nextOrder]
+      );
+      workflowId = insertResult.insertId;
+    } catch (colErr) {
+      if (colErr.code === 'ER_BAD_FIELD_ERROR' && /display_order/.test(colErr.message)) {
+        const [insertResult] = await pool.query(
+          'INSERT INTO workflows (project_id, code, name, description) VALUES (?, ?, ?, ?)',
+          [projectId, code, name, description || null]
+        );
+        workflowId = insertResult.insertId;
+      } else {
+        throw colErr;
+      }
+    }
     for (let i = 0; i < stages.length; i++) {
       const s = stages[i];
       const stageName = String(s.stage_name).trim();
@@ -114,10 +143,22 @@ router.post('/projects/:projectId/workflows', async (req, res) => {
         [workflowId, i + 1, stageName, stageRole]
       );
     }
-    const [workflows] = await pool.query(
-      'SELECT id, project_id, code, name, description, created_at, updated_at FROM workflows WHERE id = ?',
-      [workflowId]
-    );
+    let workflows;
+    try {
+      [workflows] = await pool.query(
+        'SELECT id, project_id, code, name, description, display_order, created_at, updated_at FROM workflows WHERE id = ?',
+        [workflowId]
+      );
+    } catch (colErr) {
+      if (colErr.code === 'ER_BAD_FIELD_ERROR' && /display_order/.test(colErr.message)) {
+        [workflows] = await pool.query(
+          'SELECT id, project_id, code, name, description, created_at, updated_at FROM workflows WHERE id = ?',
+          [workflowId]
+        );
+      } else {
+        throw colErr;
+      }
+    }
     const [stageRows] = await pool.query(
       'SELECT id, workflow_id, stage_order, stage_name, stage_role, created_at FROM workflow_stages WHERE workflow_id = ? ORDER BY stage_order',
       [workflowId]
@@ -127,6 +168,147 @@ router.post('/projects/:projectId/workflows', async (req, res) => {
     res.status(201).json(created);
   } catch (err) {
     sendError(res, 500, err.message || 'Failed to create workflow');
+  }
+});
+
+// ----- PATCH /api/projects/:projectId/workflows/:workflowId (update workflow + stages) -----
+router.patch('/projects/:projectId/workflows/:workflowId', async (req, res) => {
+  const projectId = parseInt(req.params.projectId, 10);
+  const workflowId = parseInt(req.params.workflowId, 10);
+  if (Number.isNaN(projectId) || Number.isNaN(workflowId)) return sendError(res, 400, 'Invalid project or workflow id');
+  const name = (req.body && req.body.name != null) ? String(req.body.name).trim() : null;
+  const description = (req.body && req.body.description != null) ? String(req.body.description).trim() : null;
+  const stages = Array.isArray(req.body.stages) ? req.body.stages : null;
+
+  try {
+    const [wfRows] = await pool.query(
+      'SELECT id, project_id, code, name, description FROM workflows WHERE id = ? AND project_id = ?',
+      [workflowId, projectId]
+    );
+    if (!wfRows.length) return sendError(res, 404, 'Workflow not found');
+
+    if (name !== null) {
+      await pool.query('UPDATE workflows SET name = ?, updated_at = CURRENT_TIMESTAMP(3) WHERE id = ?', [name, workflowId]);
+    }
+    if (description !== null) {
+      await pool.query('UPDATE workflows SET description = ?, updated_at = CURRENT_TIMESTAMP(3) WHERE id = ?', [description || null, workflowId]);
+    }
+
+    if (stages !== null) {
+      if (stages.length === 0) return sendError(res, 400, 'At least one stage is required');
+      const validRoles = ['owner', 'dev', 'unit-test', 'integration-test', 'performance-test', 'devops'];
+      for (let i = 0; i < stages.length; i++) {
+        const s = stages[i];
+        const sn = (s && s.stage_name != null) ? String(s.stage_name).trim() : '';
+        const sr = (s && s.stage_role != null) ? String(s.stage_role) : '';
+        if (!sn) return sendError(res, 400, `Stage ${i + 1}: stage name is required`);
+        if (!validRoles.includes(sr)) return sendError(res, 400, `Stage ${i + 1}: invalid stage_role (use one of ${validRoles.join(', ')})`);
+      }
+
+      const [oldStages] = await pool.query(
+        'SELECT id, stage_order FROM workflow_stages WHERE workflow_id = ? ORDER BY stage_order',
+        [workflowId]
+      );
+
+      const conn = await pool.getConnection();
+      try {
+        await conn.beginTransaction();
+        const orderOffset = 10000;
+        const newStageIds = [];
+        for (let i = 0; i < stages.length; i++) {
+          const s = stages[i];
+          const stageName = String(s.stage_name).trim();
+          const stageRole = String(s.stage_role);
+          const [ins] = await conn.query(
+            'INSERT INTO workflow_stages (workflow_id, stage_order, stage_name, stage_role) VALUES (?, ?, ?, ?)',
+            [workflowId, orderOffset + i, stageName, stageRole]
+          );
+          newStageIds.push(ins.insertId);
+        }
+        for (let i = 0; i < oldStages.length; i++) {
+          const oldId = oldStages[i].id;
+          const newIndex = Math.min(i, newStageIds.length - 1);
+          const newId = newStageIds[newIndex];
+          await conn.query('UPDATE stories SET workflow_stage_id = ? WHERE workflow_stage_id = ?', [newId, oldId]);
+        }
+        const oldIds = oldStages.map((s) => s.id);
+        if (oldIds.length) {
+          const placeholders = oldIds.map(() => '?').join(',');
+          await conn.query(`DELETE FROM workflow_stages WHERE id IN (${placeholders})`, oldIds);
+        }
+        for (let i = 0; i < newStageIds.length; i++) {
+          await conn.query('UPDATE workflow_stages SET stage_order = ? WHERE id = ?', [i + 1, newStageIds[i]]);
+        }
+        await conn.commit();
+      } catch (e) {
+        await conn.rollback();
+        throw e;
+      } finally {
+        conn.release();
+      }
+    }
+
+    const [updated] = await pool.query(
+      'SELECT id, project_id, code, name, description, created_at, updated_at FROM workflows WHERE id = ?',
+      [workflowId]
+    );
+    const [stageRows] = await pool.query(
+      'SELECT id, workflow_id, stage_order, stage_name, stage_role, created_at FROM workflow_stages WHERE workflow_id = ? ORDER BY stage_order',
+      [workflowId]
+    );
+    const result = updated[0];
+    result.stages = stageRows;
+    res.json(result);
+  } catch (err) {
+    sendError(res, 500, err.message || 'Failed to update workflow');
+  }
+});
+
+// ----- PUT /api/projects/:projectId/workflows/order (reorder workflows) -----
+router.put('/projects/:projectId/workflows/order', async (req, res) => {
+  const projectId = parseInt(req.params.projectId, 10);
+  if (Number.isNaN(projectId)) return sendError(res, 400, 'Invalid project id');
+  const orderedIds = Array.isArray(req.body && req.body.orderedWorkflowIds) ? req.body.orderedWorkflowIds : null;
+  if (!orderedIds || orderedIds.length === 0) return sendError(res, 400, 'orderedWorkflowIds array is required');
+  const workflowIds = orderedIds.map((id) => parseInt(id, 10)).filter((id) => !Number.isNaN(id));
+  if (workflowIds.length !== orderedIds.length) return sendError(res, 400, 'Invalid workflow id in orderedWorkflowIds');
+  try {
+    const placeholders = workflowIds.map(() => '?').join(',');
+    const [rows] = await pool.query(
+      `SELECT id FROM workflows WHERE project_id = ? AND id IN (${placeholders})`,
+      [projectId, ...workflowIds]
+    );
+    if (rows.length !== workflowIds.length) return sendError(res, 400, 'All workflow ids must belong to this project');
+    const conn = await pool.getConnection();
+    try {
+      for (let i = 0; i < workflowIds.length; i++) {
+        await conn.query(
+          'UPDATE workflows SET display_order = ? WHERE id = ? AND project_id = ?',
+          [i + 1, workflowIds[i], projectId]
+        );
+      }
+      res.json({ ok: true });
+    } catch (updateErr) {
+      if (updateErr.code === 'ER_BAD_FIELD_ERROR' && /display_order/.test(updateErr.message)) {
+        return sendError(
+          res,
+          501,
+          'Workflow reordering requires the database migration. From the trace_hq directory run: ./scripts/mysql.sh < database/schema/02a_workflow_display_order.sql'
+        );
+      }
+      throw updateErr;
+    } finally {
+      conn.release();
+    }
+  } catch (err) {
+    if (err.code === 'ER_BAD_FIELD_ERROR' && /display_order/.test(err.message)) {
+      return sendError(
+        res,
+        501,
+        'Workflow reordering requires the database migration. From the trace_hq directory run: ./scripts/mysql.sh < database/schema/02a_workflow_display_order.sql'
+      );
+    }
+    sendError(res, 500, err.message || 'Failed to reorder workflows');
   }
 });
 
@@ -150,7 +332,7 @@ router.get('/projects/:projectId/stories', async (req, res) => {
        LEFT JOIN workflow_stages ws ON s.workflow_stage_id = ws.id
        LEFT JOIN workflows w ON s.workflow_id = w.id
        LEFT JOIN agents a ON s.assignee_id = a.id
-       WHERE s.workflow_id IN (${placeholders})
+       WHERE s.workflow_id IN (${placeholders}) AND (s.deleted_at IS NULL)
        ORDER BY s.id`,
       workflowIds
     );
@@ -210,7 +392,7 @@ router.get('/backlog', async (req, res) => {
         a.name AS assignee_name
        FROM stories s
        LEFT JOIN agents a ON s.assignee_id = a.id
-       WHERE s.workflow_id IS NULL
+       WHERE s.workflow_id IS NULL AND (s.deleted_at IS NULL)
        ORDER BY COALESCE(s.backlog_order, 999999), s.id`
     );
     const storyIds = stories.map((s) => s.id);
@@ -261,7 +443,7 @@ router.put('/backlog/order', async (req, res) => {
   try {
     const placeholders = orderedStoryIds.map(() => '?').join(',');
     const [rows] = await conn.query(
-      `SELECT id FROM stories WHERE workflow_id IS NULL AND id IN (${placeholders})`,
+      `SELECT id FROM stories WHERE workflow_id IS NULL AND (deleted_at IS NULL) AND id IN (${placeholders})`,
       orderedStoryIds
     );
     const validIds = new Set(rows.map((r) => r.id));
@@ -489,7 +671,7 @@ router.get('/stories/:storyId', async (req, res) => {
        LEFT JOIN agents a ON s.assignee_id = a.id
        LEFT JOIN workflow_stages ws ON s.workflow_stage_id = ws.id
        LEFT JOIN workflows w ON s.workflow_id = w.id
-       WHERE s.id = ?`,
+       WHERE s.id = ? AND (s.deleted_at IS NULL)`,
       [storyId]
     );
     const story = rows[0];
@@ -513,7 +695,7 @@ router.get('/stories/:storyId', async (req, res) => {
   }
 });
 
-// ----- PATCH /api/stories/:storyId (update story fields, dependencies, related) -----
+// ----- PATCH /api/stories/:storyId (update story fields, dependencies, related; logical delete via deleted: true) -----
 router.patch('/stories/:storyId', async (req, res) => {
   const storyId = (req.params.storyId || '').trim();
   if (!storyId) return sendError(res, 400, 'Missing story id');
@@ -521,9 +703,23 @@ router.patch('/stories/:storyId', async (req, res) => {
 
   const conn = await pool.getConnection();
   try {
-    const [existing] = await conn.query('SELECT id FROM stories WHERE id = ?', [storyId]);
+    const [existing] = await conn.query('SELECT id, deleted_at FROM stories WHERE id = ?', [storyId]);
     if (!existing.length) {
       sendError(res, 404, 'Story not found');
+      return;
+    }
+    if (existing[0].deleted_at) {
+      sendError(res, 404, 'Story not found');
+      return;
+    }
+
+    // Logical delete: set deleted_at so story is hidden from lists
+    if (body.deleted === true) {
+      await conn.query(
+        'UPDATE stories SET deleted_at = CURRENT_TIMESTAMP(3), last_updated_at = CURRENT_TIMESTAMP(3) WHERE id = ?',
+        [storyId]
+      );
+      res.json({ ok: true, id: storyId });
       return;
     }
 
@@ -623,7 +819,7 @@ router.patch('/stories/:storyId/stage', async (req, res) => {
       `SELECT s.id, s.workflow_id, s.workflow_stage_id, ws.stage_name AS from_stage_name, ws.stage_order AS from_order, ws.stage_role AS from_stage_role
        FROM stories s
        LEFT JOIN workflow_stages ws ON s.workflow_stage_id = ws.id
-       WHERE s.id = ?`,
+       WHERE s.id = ? AND (s.deleted_at IS NULL)`,
       [storyId]
     );
     const story = storyRows[0];
@@ -698,7 +894,7 @@ router.patch('/stories/:storyId/workflow', async (req, res) => {
     const conn = await pool.getConnection();
     try {
       const [storyRows] = await conn.query(
-        'SELECT id, workflow_id, workflow_stage_id FROM stories WHERE id = ?',
+        'SELECT id, workflow_id, workflow_stage_id FROM stories WHERE id = ? AND (deleted_at IS NULL)',
         [storyId]
       );
       const story = storyRows[0];
@@ -755,7 +951,7 @@ router.patch('/stories/:storyId/workflow', async (req, res) => {
   const conn = await pool.getConnection();
   try {
     const [storyRows] = await conn.query(
-      'SELECT id, project_id, workflow_id, workflow_stage_id FROM stories WHERE id = ?',
+      'SELECT id, project_id, workflow_id, workflow_stage_id FROM stories WHERE id = ? AND (deleted_at IS NULL)',
       [storyId]
     );
     const story = storyRows[0];

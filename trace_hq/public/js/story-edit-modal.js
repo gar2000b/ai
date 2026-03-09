@@ -250,11 +250,76 @@ function getSelectedStoryId() {
   return card ? card.dataset.storyId || null : null;
 }
 
+function getSelectedStoryTitle() {
+  const card = document.querySelector('.story-card.selected, .backlog-card.selected');
+  if (!card) return null;
+  const titleEl = card.querySelector('.story-card-title');
+  return titleEl ? titleEl.textContent.trim() : null;
+}
+
+function closeDeleteConfirmModal() {
+  const overlay = document.getElementById('story-delete-overlay');
+  if (overlay) overlay.remove();
+}
+
+function openDeleteConfirmModal(storyId, storyTitle, onDeleted) {
+  const existing = document.getElementById('story-delete-overlay');
+  if (existing) existing.remove();
+  const root = getModalContainer();
+  const rawTitle = (storyTitle && storyTitle.trim()) ? storyTitle.trim() : '';
+  const displayTitle = rawTitle ? escapeHtml(rawTitle) : ('Story ' + escapeHtml(storyId));
+  root.innerHTML = `
+    <div id="story-delete-overlay" class="modal-overlay">
+      <div class="modal-content modal-content--story-delete">
+        <div class="modal-header">
+          <h2 class="modal-title">Delete story</h2>
+          <button type="button" class="modal-close" aria-label="Close" data-action="cancel">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p>Are you sure you wish to delete the story <strong id="story-delete-id">${escapeHtml(storyId)}</strong>?</p>
+          <p class="story-delete-title"><em>${displayTitle}</em></p>
+          <p class="story-delete-note">The story will be hidden from TRACE H.Q. It is not removed from the database and can be restored later if needed.</p>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="modal-btn modal-btn--danger" data-action="delete">Delete</button>
+          <button type="button" class="modal-btn modal-btn--secondary" data-action="cancel">Cancel</button>
+        </div>
+      </div>
+    </div>
+  `;
+  const overlay = document.getElementById('story-delete-overlay');
+  overlay.querySelectorAll('[data-action="cancel"]').forEach((btn) => {
+    btn.addEventListener('click', closeDeleteConfirmModal);
+  });
+  overlay.querySelector('[data-action="delete"]').addEventListener('click', () => {
+    fetch('/api/stories/' + encodeURIComponent(storyId), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deleted: true }),
+    })
+      .then((res) => {
+        if (!res.ok) return res.json().then((d) => Promise.reject(new Error(d.error || res.statusText)));
+        closeDeleteConfirmModal();
+        if (typeof onDeleted === 'function') onDeleted();
+        if (typeof window.showToast === 'function') window.showToast('Story deleted', 'success');
+      })
+      .catch((err) => {
+        if (typeof window.showToast === 'function') window.showToast(err.message || 'Failed to delete story', 'error');
+      });
+  });
+  document.addEventListener('keydown', function onEscape(e) {
+    if (e.key === 'Escape' && document.getElementById('story-delete-overlay')) {
+      closeDeleteConfirmModal();
+      document.removeEventListener('keydown', onEscape);
+    }
+  });
+}
+
 function initEditStoryOnKeyE() {
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'e' && e.key !== 'E') return;
-    if (document.getElementById('create-project-overlay') || document.getElementById('create-workflow-overlay') || document.getElementById('story-create-overlay') || document.getElementById('story-edit-overlay')) return;
-    if (e.target && (e.target.closest('#create-project-overlay') || e.target.closest('#create-workflow-overlay') || e.target.closest('#story-create-overlay') || e.target.closest('#story-edit-overlay'))) return;
+    if (document.getElementById('create-project-overlay') || document.getElementById('create-workflow-overlay') || document.getElementById('story-create-overlay') || document.getElementById('story-edit-overlay') || document.getElementById('story-delete-overlay')) return;
+    if (e.target && (e.target.closest('#create-project-overlay') || e.target.closest('#create-workflow-overlay') || e.target.closest('#story-create-overlay') || e.target.closest('#story-edit-overlay') || e.target.closest('#story-delete-overlay'))) return;
     const storyId = getSelectedStoryId();
     if (!storyId) return;
     e.preventDefault();
@@ -274,18 +339,50 @@ function initEditStoryOnKeyE() {
   });
 }
 
+function initDeleteStoryOnKeyD() {
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'd' && e.key !== 'D') return;
+    if (document.getElementById('create-project-overlay') || document.getElementById('create-workflow-overlay') || document.getElementById('story-create-overlay') || document.getElementById('story-edit-overlay') || document.getElementById('story-delete-overlay')) return;
+    if (e.target && (e.target.closest('#create-project-overlay') || e.target.closest('#create-workflow-overlay') || e.target.closest('#story-create-overlay') || e.target.closest('#story-edit-overlay') || e.target.closest('#story-delete-overlay'))) return;
+    const storyId = getSelectedStoryId();
+    if (!storyId) return;
+    e.preventDefault();
+    const storyTitle = getSelectedStoryTitle();
+    const onDeleted = () => {
+      const boardContainer = document.getElementById('board-container');
+      const backlogContainer = document.getElementById('backlog-container');
+      if (boardContainer && boardContainer.querySelector('.board-section')) {
+        const select = document.getElementById('project-select');
+        if (select && select.selectedIndex >= 0) {
+          const opt = select.options[select.selectedIndex];
+          if (opt && window.TraceHqBoard) window.TraceHqBoard.renderBoard(boardContainer, parseInt(opt.value, 10), opt.text);
+        }
+      }
+      if (backlogContainer && window.TraceHqBacklog) window.TraceHqBacklog.renderBacklog(backlogContainer);
+    };
+    openDeleteConfirmModal(storyId, storyTitle, onDeleted);
+  });
+}
+
 if (typeof document !== 'undefined') {
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initEditStoryOnKeyE);
+    document.addEventListener('DOMContentLoaded', () => {
+      initEditStoryOnKeyE();
+      initDeleteStoryOnKeyD();
+    });
   } else {
     initEditStoryOnKeyE();
+    initDeleteStoryOnKeyD();
   }
 }
 
 window.TraceHqStoryEditModal = {
   openEditModal,
   closeModal,
-  getSelectedStoryId
+  openDeleteConfirmModal,
+  closeDeleteConfirmModal,
+  getSelectedStoryId,
+  getSelectedStoryTitle
 };
 
 // ----- Create story modal (C key from Workflows/Backlog) -----

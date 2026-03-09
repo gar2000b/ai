@@ -59,10 +59,56 @@ function renderBoard(container, projectId, projectName) {
         storiesByStage[k].push(s);
       });
 
-      workflows.forEach((wf) => {
+      workflows.forEach((wf, index) => {
         const section = document.createElement('div');
         section.className = 'board-section';
-        section.innerHTML = `<h2>${escapeHtml(wf.name)}</h2>`;
+        section.innerHTML = `
+          <div class="board-section-header">
+            <h2 class="board-section-title">${escapeHtml(wf.name)}</h2>
+            <div class="board-section-actions">
+              <button type="button" class="board-section-move board-section-move-up" aria-label="Move workflow up" title="Move up">&uarr;</button>
+              <button type="button" class="board-section-move board-section-move-down" aria-label="Move workflow down" title="Move down">&darr;</button>
+            </div>
+            <a href="#" class="board-section-edit" data-workflow-id="${escapeHtml(String(wf.id))}" aria-label="Edit workflow">Edit</a>
+          </div>
+        `;
+        const editLink = section.querySelector('.board-section-edit');
+        editLink.addEventListener('click', (e) => {
+          e.preventDefault();
+          if (window.TraceHqWorkflowCreateModal && typeof window.TraceHqWorkflowCreateModal.openEditWorkflowModal === 'function') {
+            window.TraceHqWorkflowCreateModal.openEditWorkflowModal(projectId, projectName, wf, refreshBoard);
+          }
+        });
+        const moveUp = section.querySelector('.board-section-move-up');
+        const moveDown = section.querySelector('.board-section-move-down');
+        moveUp.disabled = index === 0;
+        moveDown.disabled = index === workflows.length - 1;
+        const reorder = (newOrder) => {
+          fetch(`/api/projects/${projectId}/workflows/order`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orderedWorkflowIds: newOrder })
+          })
+            .then((res) => {
+              if (!res.ok) return res.json().then((d) => Promise.reject(new Error(d.error || res.statusText)));
+              refreshBoard();
+            })
+            .catch((err) => {
+              if (typeof window.showToast === 'function') window.showToast(err.message, 'error');
+            });
+        };
+        moveUp.addEventListener('click', () => {
+          if (index === 0) return;
+          const newOrder = workflows.slice().map((w) => w.id);
+          [newOrder[index - 1], newOrder[index]] = [newOrder[index], newOrder[index - 1]];
+          reorder(newOrder);
+        });
+        moveDown.addEventListener('click', () => {
+          if (index === workflows.length - 1) return;
+          const newOrder = workflows.slice().map((w) => w.id);
+          [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
+          reorder(newOrder);
+        });
         const columns = document.createElement('div');
         columns.className = 'workflow-columns';
 

@@ -224,7 +224,8 @@ function isAnyModalOpen() {
   return document.getElementById('create-project-overlay') ||
     document.getElementById('create-workflow-overlay') ||
     document.getElementById('story-create-overlay') ||
-    document.getElementById('story-edit-overlay');
+    document.getElementById('story-edit-overlay') ||
+    document.getElementById('story-delete-overlay');
 }
 
 function isTargetInsideModal(target) {
@@ -232,7 +233,8 @@ function isTargetInsideModal(target) {
     target.closest('#create-project-overlay') ||
     target.closest('#create-workflow-overlay') ||
     target.closest('#story-create-overlay') ||
-    target.closest('#story-edit-overlay')
+    target.closest('#story-edit-overlay') ||
+    target.closest('#story-delete-overlay')
   );
 }
 

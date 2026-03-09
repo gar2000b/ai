@@ -1,5 +1,5 @@
 /**
- * TRACE H.Q. — Create Workflow modal (Workflows section only).
+ * TRACE H.Q. — Create / Edit Workflow modal (Workflows section only).
  * Workflow: code, name, description; stages: stage_name + stage_role per row.
  */
 
@@ -178,7 +178,147 @@ function openCreateWorkflowModal(projectId, projectName, onCreated) {
   setTimeout(() => document.getElementById('create-workflow-code').focus(), 50);
 }
 
+function openEditWorkflowModal(projectId, projectName, workflow, onSaved) {
+  const stages = workflow.stages || [];
+  const stagesHtml = stages.length
+    ? stages.map((s, i) => renderStageRow(i, { stage_name: s.stage_name, stage_role: s.stage_role || 'owner' })).join('')
+    : renderStageRow(0, { stage_name: 'Todo', stage_role: 'owner' });
+
+  const root = getModalRoot();
+  root.innerHTML = `
+    <div id="create-workflow-overlay" class="modal-overlay">
+      <div class="modal-content modal-content--create-workflow">
+        <div class="modal-header">
+          <h2 class="modal-title">Edit Workflow</h2>
+          <button type="button" class="modal-close" aria-label="Close" data-action="cancel">&times;</button>
+        </div>
+        <p class="modal-subtitle">Project: <strong>${escapeHtml(projectName)}</strong></p>
+        <form id="create-workflow-form" class="modal-form" data-workflow-id="${escapeHtml(String(workflow.id))}">
+          <div class="form-section">
+            <div class="form-row">
+              <label for="create-workflow-code">Code</label>
+              <input type="text" id="create-workflow-code" name="code" value="${escapeHtml(workflow.code || '')}" maxlength="32" disabled readonly />
+              <span class="form-hint">Code cannot be changed when editing.</span>
+            </div>
+            <div class="form-row">
+              <label for="create-workflow-name">Name</label>
+              <input type="text" id="create-workflow-name" name="name" required maxlength="255" value="${escapeHtml(workflow.name || '')}" />
+            </div>
+            <div class="form-row">
+              <label for="create-workflow-description">Description (optional)</label>
+              <textarea id="create-workflow-description" name="description" rows="2">${escapeHtml(workflow.description || '')}</textarea>
+            </div>
+          </div>
+          <div class="form-section">
+            <div class="form-row form-row--head">
+              <label>Stages</label>
+              <button type="button" id="workflow-add-stage" class="modal-btn modal-btn--secondary">Add stage</button>
+            </div>
+            <div class="workflow-stages-header">
+              <span class="workflow-stages-header__name">Stage Name</span>
+              <span class="workflow-stages-header__role">Stage Role</span>
+              <span class="workflow-stages-header__actions"></span>
+            </div>
+            <div id="workflow-stages-list" class="workflow-stages-list">
+              ${stagesHtml}
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button type="submit" class="modal-btn modal-btn--primary">Save</button>
+            <button type="button" class="modal-btn modal-btn--secondary" data-action="cancel">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+
+  const overlay = document.getElementById('create-workflow-overlay');
+  const form = document.getElementById('create-workflow-form');
+  const stagesList = document.getElementById('workflow-stages-list');
+  const addStageBtn = document.getElementById('workflow-add-stage');
+  const workflowId = workflow.id;
+
+  document.addEventListener('keydown', function onEscape(e) {
+    if (e.key === 'Escape' && document.getElementById('create-workflow-overlay')) {
+      closeModal();
+      document.removeEventListener('keydown', onEscape);
+    }
+  });
+
+  overlay.querySelectorAll('[data-action="cancel"]').forEach((btn) => btn.addEventListener('click', closeModal));
+
+  addStageBtn.addEventListener('click', () => {
+    const rows = stagesList.querySelectorAll('.workflow-stage-row');
+    const index = rows.length;
+    stagesList.insertAdjacentHTML('beforeend', renderStageRow(index, { stage_name: 'In Progress', stage_role: 'dev' }));
+  });
+
+  stagesList.addEventListener('click', (e) => {
+    const removeBtn = e.target.closest('.workflow-stage-remove');
+    if (removeBtn) {
+      const row = removeBtn.closest('.workflow-stage-row');
+      if (stagesList.querySelectorAll('.workflow-stage-row').length > 1) row.remove();
+      return;
+    }
+    const row = e.target.closest('.workflow-stage-row');
+    if (!row) return;
+    const moveUp = e.target.closest('.workflow-stage-move-up');
+    const moveDown = e.target.closest('.workflow-stage-move-down');
+    if (moveUp && row.previousElementSibling) {
+      stagesList.insertBefore(row, row.previousElementSibling);
+    } else if (moveDown && row.nextElementSibling) {
+      stagesList.insertBefore(row.nextElementSibling, row);
+    }
+  });
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = (document.getElementById('create-workflow-name').value || '').trim();
+    const description = (document.getElementById('create-workflow-description').value || '').trim() || null;
+    if (!name) {
+      if (typeof window.showToast === 'function') window.showToast('Name is required', 'error');
+      return;
+    }
+    const rows = stagesList.querySelectorAll('.workflow-stage-row');
+    const stagesPayload = [];
+    rows.forEach((row) => {
+      const stageName = (row.querySelector('.workflow-stage-name').value || '').trim();
+      const stageRole = (row.querySelector('.workflow-stage-role').value || 'owner').trim();
+      if (stageName) stagesPayload.push({ stage_name: stageName, stage_role: stageRole });
+    });
+    if (stagesPayload.length === 0) {
+      if (typeof window.showToast === 'function') window.showToast('At least one stage is required', 'error');
+      return;
+    }
+    const submitBtn = form.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Saving…';
+    fetch(`/api/projects/${projectId}/workflows/${workflowId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, description, stages: stagesPayload })
+    })
+      .then((res) => {
+        if (!res.ok) return res.json().then((d) => Promise.reject(new Error(d.error || res.statusText)));
+        return res.json();
+      })
+      .then((updated) => {
+        closeModal();
+        if (typeof window.showToast === 'function') window.showToast(`Workflow "${updated.name}" updated`, 'success');
+        if (typeof onSaved === 'function') onSaved();
+      })
+      .catch((err) => {
+        if (typeof window.showToast === 'function') window.showToast(err.message, 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Save';
+      });
+  });
+
+  setTimeout(() => document.getElementById('create-workflow-name').focus(), 50);
+}
+
 window.TraceHqWorkflowCreateModal = {
   openCreateWorkflowModal,
+  openEditWorkflowModal,
   closeCreateWorkflowModal: closeModal
 };

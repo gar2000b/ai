@@ -235,6 +235,58 @@ body {
   margin-bottom: 2rem;
 }
 
+.board-section-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.board-section-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0;
+  line-height: 1;
+}
+
+.board-section-edit {
+  font-size: 0.875rem;
+  line-height: 1;
+  color: var(--accent);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.board-section-edit:hover {
+  text-decoration: underline;
+}
+
+.board-section-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  flex-shrink: 0;
+}
+
+.board-section-move {
+  padding: 0.2rem 0.4rem;
+  font-size: 1rem;
+  line-height: 1;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 4px;
+}
+.board-section-move:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--bg-hover);
+  border-color: var(--text-muted);
+}
+.board-section-move:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .board-section h2 {
   font-size: 1.125rem;
   margin: 0 0 0.75rem;
@@ -827,4 +879,29 @@ body {
 .modal-btn:disabled {
   opacity: 0.7;
   cursor: not-allowed;
+}
+
+.modal-btn--danger {
+  background: var(--danger-bg, #c53030);
+  color: #fff;
+  border-color: var(--danger-bg, #c53030);
+}
+
+.modal-btn--danger:hover:not(:disabled) {
+  background: var(--danger-hover, #9b2c2c);
+  border-color: var(--danger-hover, #9b2c2c);
+}
+
+.modal-content--story-delete .modal-body {
+  padding: 1rem 1.25rem;
+}
+
+.story-delete-title {
+  margin: 0.5rem 0;
+}
+
+.story-delete-note {
+  margin-top: 1rem;
+  font-size: 0.875rem;
+  color: var(--text-muted, #666);
 }
