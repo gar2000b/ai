@@ -189,6 +189,32 @@ body {
   text-decoration: underline;
 }
 
+.btn-create-story {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  background: var(--accent);
+  color: #fff;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-create-story:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.btn-create-story:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--border);
+}
+
+.btn-create-story .btn-shortcut {
+  text-decoration: underline;
+}
+
 /* Main content */
 .main-content {
   flex: 1;

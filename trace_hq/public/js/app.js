@@ -176,6 +176,18 @@ function handleRoute() {
       createBtn.addEventListener('click', () => openCreateProjectModal(refreshWorkflowsView));
     }
 
+    const createStoryBtn = document.getElementById('create-story-btn');
+    if (createStoryBtn && !createStoryBtn._createStoryAttached) {
+      createStoryBtn._createStoryAttached = true;
+      createStoryBtn.addEventListener('click', () => {
+        if (window.TraceHqStoryCreateModal && typeof window.TraceHqStoryCreateModal.openCreateModal === 'function') {
+          window.TraceHqStoryCreateModal.openCreateModal(function onCreated() {
+            if (typeof window.__traceHqRefreshWorkflows === 'function') window.__traceHqRefreshWorkflows();
+          });
+        }
+      });
+    }
+
     refreshWorkflowsView();
     return;
   }

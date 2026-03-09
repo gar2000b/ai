@@ -57,7 +57,7 @@ The **Workflows** section is a multi-agent kanban-style system. Multiple agents 
    npm start
    ```
 
-   The app serves both the API and the web UI on one port. Open **http://localhost:3000** in a browser to use TRACE H.Q. (Port can be overridden with the `PORT` environment variable.)
+   The app serves both the API and the web UI on one port. On startup it waits for the database to be ready (with retries) before accepting connections, so the first page load is reliable. Open **http://localhost:3000** in a browser to use TRACE H.Q. (Port can be overridden with the `PORT` environment variable.)
 
 5. **After pulling changes that add schema migrations**
 

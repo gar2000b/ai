@@ -89,7 +89,7 @@ Exact file names can vary (e.g. `src/` instead of `api/`, or multiple route file
   - Use Express (or minimal Node HTTP + router).
   - Mount API routes under a base path (e.g. `/api`).
   - Serve static files from `public/` (or chosen folder) for the app UI (HTML, CSS, JS, images). No separate static host; the Node app serves both API and static content.
-  - Listen on a configurable port (e.g. `PORT` from env, default 3000).
+  - **DB warmup:** Before calling `listen`, warm up the database (e.g. run a simple query such as `SELECT 1` with retries and a short delay between attempts). Only then listen on a configurable port (e.g. `PORT` from env, default 3000). This avoids "Failed to load stories" on the first request when MySQL is slow to start. The connection pool (in `config/db.js`) should use a `connectTimeout` (e.g. 15s) for slow MySQL startup.
   - Health check: e.g. `GET /api/health` returning 200 and a simple payload so the app can be verified without the DB.
 
 ---
@@ -179,7 +179,7 @@ Can be deferred to a follow-up.
     - **Workflows** — navigates to the project board (see below).
     - **Settings** — opens settings (theme, etc.).
   - Optional: Home link that shows a simple home view (default view when the app runs).
-  - **Workflows view:** Contains a **board header** (top of the view) with a title on the left and the **project dropdown on the top right** for easy access. The project selector is not in the side menu.
+  - **Workflows view:** Contains a **board header** (top of the view) with a title on the left and the **project dropdown on the top right** for easy access. The project selector is not in the side menu. The header also includes a **"Create Project"** button (and **P** shortcut) and a **"Create story"** button (same as **C** key) to the right of the Create Project button.
 
 ### 4.2 Client-side “routing”
 
@@ -202,7 +202,7 @@ Can be deferred to a follow-up.
 
 ### 5.1 One page, stacked workflow sections
 
-- **Board header:** The Workflows view has a header at the top: title (e.g. "Project board") on the left, **project dropdown on the top right**. The dropdown is always visible and easily accessible when viewing the board.
+- **Board header:** The Workflows view has a header at the top: title (e.g. "Project board") on the left, **project dropdown on the top right**, then **Create Project** and **Create story** buttons. The **Create story** button opens the same create-story modal as pressing **C**. The dropdown is always visible and easily accessible when viewing the board.
 - When the user is on “Workflows” and a project is selected:
   - **GET /api/projects/:projectId/workflows** and **GET /api/projects/:projectId/stories** (or a combined endpoint if preferred).
   - Render **one scrollable page** (the project board) that contains **all** workflows for that project, stacked vertically in workflow id order. Each workflow is one **workflow section**: a kanban-style block with:
@@ -237,11 +237,15 @@ Can be deferred to a follow-up.
 
 - API: Return appropriate status codes and JSON error messages. Frontend: show a simple message or toast when a request fails (e.g. 400 invalid transition, 500 server error).
 
-### 6.2 No password in logs or CLI
+### 6.2 DB warmup on startup
+
+- On server start, warm up the database (e.g. run a simple query with retries) before calling `listen`, so the first HTTP request does not trigger a cold connection and fail (e.g. "Failed to load stories") when MySQL is slow to start. The pool in `config/db.js` should use a `connectTimeout` (e.g. 15s) for slow MySQL startup.
+
+### 6.3 No password in logs or CLI
 
 - Confirm that `DB_PASSWORD` and full connection strings are never logged or passed on the command line. Use `config/db.js` and `.env` only.
 
-### 6.3 Readme and run instructions
+### 6.4 Readme and run instructions
 
 - Add or update **trace_hq/README.md** with:
   - Prerequisites: Node.js, MySQL, schema and seed data applied.

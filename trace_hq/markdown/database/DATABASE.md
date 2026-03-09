@@ -36,6 +36,7 @@ The script loads `trace_hq/.env`, writes a temporary MySQL `[client]` config fil
    `mysql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}/${DB_NAME}`  
    (Use this in code only; never log it or pass the password on a shell command line.)
 4. **Security:** Never log or expose `DB_PASSWORD`; never commit real credentials; keep `.env` in `.gitignore`. For CLI, use `scripts/mysql.sh` so the password is not on the command line.
+5. **Startup:** The app performs a DB warmup on startup (e.g. a simple query with retries) before listening for HTTP requests, so the first request does not fail when MySQL is slow to start. The connection pool uses a 15s connect timeout.
 
 ## Schema
 
