@@ -47,6 +47,8 @@ Table definitions (DDL only, no data) live in **`trace_hq/database/schema/`** as
 - **Backlog ordering:** The `stories` table includes **`backlog_order`** (INT UNSIGNED NULL). When a story is in the backlog (`workflow_id` IS NULL), this field controls display order (lower = earlier). Migration **`database/schema/04c_backlog_order.sql`** adds it if missing.
 - **Workflow order:** The `workflows` table includes **`display_order`** (INT UNSIGNED NOT NULL, 1-based per project) for user-defined order on the project board. Migration **`database/schema/02a_workflow_display_order.sql`** adds it (requires MySQL 8.0+). Run after `02_workflows.sql` for new or existing DBs. The app works without this migration (workflows ordered by id; reorder arrows then show a message to run the migration).
 - **Logical delete (stories):** The `stories` table includes **`deleted_at`** (DATETIME(3) NULL). When set, the story is hidden from lists and API (soft delete). Migration **`database/schema/07_stories_deleted_at.sql`** adds it. Run once per DB to enable the “Delete story” (D key) feature.
+- **Logical delete (workflows):** The `workflows` table includes **`deleted_at`** (DATETIME(3) NULL). When set, the workflow is hidden from the board and API (soft delete). Migration **`database/schema/08_workflows_deleted_at.sql`** adds it. Run once per DB to enable the “Delete” link beside each workflow on the board.
+- **Logical delete (projects):** The `projects` table includes **`deleted_at`** (DATETIME(3) NULL). When set, the project is hidden from the project switcher and API (soft delete). Migration **`database/schema/09_projects_deleted_at.sql`** adds it. Run once per DB to enable the “Delete” link beside the project dropdown.
 
 ## Populating the schema
 

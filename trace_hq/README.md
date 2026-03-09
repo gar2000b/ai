@@ -10,7 +10,7 @@ The **Workflows** section is a multi-agent kanban-style system. Multiple agents 
 
 ### In a nutshell
 
-- **Workflows** = delivery pipelines, each represented as a board. A project contains one or more workflows (e.g. Development, Performance Testing, DevOps, Manual). A **“Create Project”** button (to the right of the project dropdown) opens a **modal** to create a new empty project by name. Each workflow section has **up/down** arrow buttons and an **Edit** link (beside the workflow name) to reorder workflows and edit name, description, and stages. From the board, stories can be **moved back to the backlog** via the “Move to…” dropdown (first option: Backlog).
+- **Workflows** = delivery pipelines, each represented as a board. A project contains one or more workflows (e.g. Development, Performance Testing, DevOps, Manual). A **“Create Project”** button (to the right of the project dropdown) opens a **modal** to create a new empty project by name. The **project dropdown** (project switcher) in the header includes an **Edit** link (to change the project name in a simple modal) and a red **Delete** link to logically delete the currently selected project (after confirmation). Each workflow section has **up/down** arrow buttons, an **Edit** link, and a red **Delete** link (beside the workflow name) to reorder, edit, or logically delete workflows. From the board, stories can be **moved back to the backlog** via the “Move to…” dropdown (first option: Backlog).
 - **Backlog** = global list of stories not yet in any workflow (not tied to a project). Stories can be moved from the backlog onto **any project’s workflow** via “Add to workflow” (dropdown grouped by project). Backlog order is **reordered by drag-and-drop** and persisted.
 - **User stories** = units of work with a stable identity. A story is either in a workflow (on a project board; then it belongs to that project) or in the global backlog (no project). Stories in a workflow carry execution state: current stage, assignee, dependencies, blocking, branch/PR/artifact tracking, and an audit trail.
 - **Agents** = role-based workers who move stories forward one stage at a time. The **owner** is the governance authority and can move any story to any stage.
@@ -61,13 +61,15 @@ The **Workflows** section is a multi-agent kanban-style system. Multiple agents 
 
 5. **After pulling changes that add schema migrations**
 
-   If the codebase adds a **new migration** (e.g. `02a_workflow_display_order.sql`, `04c_backlog_order.sql`, `04d_global_backlog.sql`, `07_stories_deleted_at.sql`), run each **once per DB** from the `trace_hq` directory:
+   If the codebase adds a **new migration** (e.g. `02a_workflow_display_order.sql`, `04c_backlog_order.sql`, `04d_global_backlog.sql`, `07_stories_deleted_at.sql`, `08_workflows_deleted_at.sql`, `09_projects_deleted_at.sql`), run each **once per DB** from the `trace_hq` directory:
 
    ```bash
    ./scripts/mysql.sh < database/schema/02a_workflow_display_order.sql
    ./scripts/mysql.sh < database/schema/04c_backlog_order.sql
    ./scripts/mysql.sh < database/schema/04d_global_backlog.sql
    ./scripts/mysql.sh < database/schema/07_stories_deleted_at.sql
+   ./scripts/mysql.sh < database/schema/08_workflows_deleted_at.sql
+   ./scripts/mysql.sh < database/schema/09_projects_deleted_at.sql
    ```
 
    Then **restart the app** if it is already running. No need to run migrations for code-only or frontend-only changes.

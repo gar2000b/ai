@@ -163,6 +163,36 @@ body {
   outline: none;
 }
 
+.project-switcher__edit {
+  font-size: 0.875rem;
+  line-height: 1;
+  color: var(--accent);
+  text-decoration: none;
+  white-space: nowrap;
+  margin-left: 0.25rem;
+}
+.project-switcher__edit:hover {
+  text-decoration: underline;
+}
+.project-switcher__edit.hidden {
+  display: none;
+}
+
+.project-switcher__delete {
+  font-size: 0.875rem;
+  color: var(--danger-bg, #c53030);
+  text-decoration: none;
+  white-space: nowrap;
+  margin-left: 0.25rem;
+}
+.project-switcher__delete:hover {
+  color: var(--danger-hover, #9b2c2c);
+  text-decoration: underline;
+}
+.project-switcher__delete.hidden {
+  display: none;
+}
+
 .workflows-header-actions {
   display: flex;
   align-items: center;
@@ -257,6 +287,19 @@ body {
   white-space: nowrap;
 }
 .board-section-edit:hover {
+  text-decoration: underline;
+}
+
+.board-section-delete {
+  font-size: 0.875rem;
+  line-height: 1;
+  color: var(--danger-bg, #c53030);
+  text-decoration: none;
+  white-space: nowrap;
+  margin-left: 0.5rem;
+}
+.board-section-delete:hover {
+  color: var(--danger-hover, #9b2c2c);
   text-decoration: underline;
 }
 
@@ -561,6 +604,14 @@ body {
 }
 
 .modal-content--create-project .modal-form {
+  padding: 0 1.25rem 1.25rem;
+}
+
+.modal-content--edit-project {
+  max-width: 420px;
+}
+
+.modal-content--edit-project .modal-form {
   padding: 0 1.25rem 1.25rem;
 }
 
@@ -901,6 +952,26 @@ body {
 }
 
 .story-delete-note {
+  margin-top: 1rem;
+  font-size: 0.875rem;
+  color: var(--text-muted, #666);
+}
+
+.modal-content--workflow-delete .modal-body {
+  padding: 1rem 1.25rem;
+}
+
+.workflow-delete-note {
+  margin-top: 1rem;
+  font-size: 0.875rem;
+  color: var(--text-muted, #666);
+}
+
+.modal-content--project-delete .modal-body {
+  padding: 1rem 1.25rem;
+}
+
+.project-delete-note {
   margin-top: 1rem;
   font-size: 0.875rem;
   color: var(--text-muted, #666);

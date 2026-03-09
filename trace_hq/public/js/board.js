@@ -70,6 +70,7 @@ function renderBoard(container, projectId, projectName) {
               <button type="button" class="board-section-move board-section-move-down" aria-label="Move workflow down" title="Move down">&darr;</button>
             </div>
             <a href="#" class="board-section-edit" data-workflow-id="${escapeHtml(String(wf.id))}" aria-label="Edit workflow">Edit</a>
+            <a href="#" class="board-section-delete" data-workflow-id="${escapeHtml(String(wf.id))}" data-workflow-name="${escapeHtml(wf.name)}" aria-label="Delete workflow">Delete</a>
           </div>
         `;
         const editLink = section.querySelector('.board-section-edit');
@@ -78,6 +79,11 @@ function renderBoard(container, projectId, projectName) {
           if (window.TraceHqWorkflowCreateModal && typeof window.TraceHqWorkflowCreateModal.openEditWorkflowModal === 'function') {
             window.TraceHqWorkflowCreateModal.openEditWorkflowModal(projectId, projectName, wf, refreshBoard);
           }
+        });
+        const deleteLink = section.querySelector('.board-section-delete');
+        deleteLink.addEventListener('click', (e) => {
+          e.preventDefault();
+          openDeleteWorkflowModal(projectId, projectName, wf.id, wf.name, refreshBoard);
         });
         const moveUp = section.querySelector('.board-section-move-up');
         const moveDown = section.querySelector('.board-section-move-down');
@@ -192,9 +198,72 @@ function escapeHtml(s) {
   return el.innerHTML;
 }
 
+function closeDeleteWorkflowModal() {
+  const overlay = document.getElementById('workflow-delete-overlay');
+  if (overlay) overlay.remove();
+}
+
+function openDeleteWorkflowModal(projectId, projectName, workflowId, workflowName, onDeleted) {
+  const existing = document.getElementById('workflow-delete-overlay');
+  if (existing) existing.remove();
+  let root = document.getElementById('workflow-delete-modal-root');
+  if (!root) {
+    root = document.createElement('div');
+    root.id = 'workflow-delete-modal-root';
+    document.body.appendChild(root);
+  }
+  const name = (workflowName && String(workflowName).trim()) ? escapeHtml(workflowName) : ('Workflow #' + workflowId);
+  root.innerHTML = `
+    <div id="workflow-delete-overlay" class="modal-overlay">
+      <div class="modal-content modal-content--workflow-delete">
+        <div class="modal-header">
+          <h2 class="modal-title">Delete workflow</h2>
+          <button type="button" class="modal-close" aria-label="Close" data-action="cancel">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p>Are you sure you wish to delete the workflow <strong>${name}</strong>?</p>
+          <p class="workflow-delete-note">The workflow will be hidden from the board. Stories in this workflow will no longer appear until the workflow is restored. The data is not removed from the database.</p>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="modal-btn modal-btn--danger" data-action="delete">Delete</button>
+          <button type="button" class="modal-btn modal-btn--secondary" data-action="cancel">Cancel</button>
+        </div>
+      </div>
+    </div>
+  `;
+  const overlay = document.getElementById('workflow-delete-overlay');
+  overlay.querySelectorAll('[data-action="cancel"]').forEach((btn) => {
+    btn.addEventListener('click', closeDeleteWorkflowModal);
+  });
+  overlay.querySelector('[data-action="delete"]').addEventListener('click', () => {
+    fetch(`/api/projects/${projectId}/workflows/${workflowId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deleted: true }),
+    })
+      .then((res) => {
+        if (!res.ok) return res.json().then((d) => Promise.reject(new Error(d.error || res.statusText)));
+        closeDeleteWorkflowModal();
+        if (typeof onDeleted === 'function') onDeleted();
+        if (typeof window.showToast === 'function') window.showToast('Workflow deleted', 'success');
+      })
+      .catch((err) => {
+        if (typeof window.showToast === 'function') window.showToast(err.message || 'Failed to delete workflow', 'error');
+      });
+  });
+  document.addEventListener('keydown', function onEscape(e) {
+    if (e.key === 'Escape' && document.getElementById('workflow-delete-overlay')) {
+      closeDeleteWorkflowModal();
+      document.removeEventListener('keydown', onEscape);
+    }
+  });
+}
+
 window.TraceHqBoard = {
   getLastProjectId,
   setLastProjectId,
   loadProjects,
   renderBoard,
+  openDeleteWorkflowModal,
+  closeDeleteWorkflowModal,
 };

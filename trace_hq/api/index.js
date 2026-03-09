@@ -27,12 +27,80 @@ async function getOwnerAgentId() {
 // ----- GET /api/projects -----
 router.get('/projects', async (req, res) => {
   try {
-    const [rows] = await pool.query(
-      'SELECT id, name, created_at, updated_at FROM projects ORDER BY id'
-    );
+    let rows;
+    try {
+      [rows] = await pool.query(
+        'SELECT id, name, created_at, updated_at FROM projects WHERE (deleted_at IS NULL) ORDER BY id'
+      );
+    } catch (colErr) {
+      if (colErr.code === 'ER_BAD_FIELD_ERROR' && /deleted_at/.test(colErr.message)) {
+        [rows] = await pool.query(
+          'SELECT id, name, created_at, updated_at FROM projects ORDER BY id'
+        );
+      } else {
+        throw colErr;
+      }
+    }
     res.json(rows);
   } catch (err) {
     sendError(res, 500, err.message || 'Failed to fetch projects');
+  }
+});
+
+// ----- PATCH /api/projects/:projectId (update name, or logical delete via deleted: true) -----
+router.patch('/projects/:projectId', async (req, res) => {
+  const projectId = parseInt(req.params.projectId, 10);
+  if (Number.isNaN(projectId)) return sendError(res, 400, 'Invalid project id');
+  const body = req.body || {};
+  try {
+    let existing;
+    try {
+      [existing] = await pool.query(
+        'SELECT id, name, deleted_at FROM projects WHERE id = ?',
+        [projectId]
+      );
+    } catch (colErr) {
+      if (colErr.code === 'ER_BAD_FIELD_ERROR' && /deleted_at/.test(colErr.message)) {
+        [existing] = await pool.query('SELECT id, name FROM projects WHERE id = ?', [projectId]);
+      } else {
+        throw colErr;
+      }
+    }
+    if (!existing.length) return sendError(res, 404, 'Project not found');
+    if (existing[0].deleted_at) return sendError(res, 404, 'Project not found');
+
+    if (body.deleted === true) {
+      try {
+        await pool.query(
+          'UPDATE projects SET deleted_at = CURRENT_TIMESTAMP(3), updated_at = CURRENT_TIMESTAMP(3) WHERE id = ?',
+          [projectId]
+        );
+      } catch (updErr) {
+        if (updErr.code === 'ER_BAD_FIELD_ERROR' && /deleted_at/.test(updErr.message)) {
+          return sendError(res, 501, 'Project logical delete not available; run migration 09_projects_deleted_at.sql');
+        }
+        throw updErr;
+      }
+      return res.json({ ok: true, id: projectId });
+    }
+
+    const name = (body.name != null) ? String(body.name).trim() : null;
+    if (name !== null) {
+      if (!name) return sendError(res, 400, 'Project name cannot be empty');
+      await pool.query(
+        'UPDATE projects SET name = ?, updated_at = CURRENT_TIMESTAMP(3) WHERE id = ?',
+        [name, projectId]
+      );
+      const [rows] = await pool.query(
+        'SELECT id, name, created_at, updated_at FROM projects WHERE id = ?',
+        [projectId]
+      );
+      return res.json(rows[0]);
+    }
+
+    return sendError(res, 400, 'Provide name (to update) or deleted: true (to delete)');
+  } catch (err) {
+    sendError(res, 500, err.message || 'Failed to update project');
   }
 });
 
@@ -60,16 +128,38 @@ router.get('/projects/:projectId/workflows', async (req, res) => {
   const projectId = parseInt(req.params.projectId, 10);
   if (Number.isNaN(projectId)) return sendError(res, 400, 'Invalid project id');
   try {
+    let projectExists;
+    try {
+      const [projRows] = await pool.query(
+        'SELECT id FROM projects WHERE id = ? AND (deleted_at IS NULL)',
+        [projectId]
+      );
+      projectExists = projRows.length > 0;
+    } catch (colErr) {
+      if (colErr.code === 'ER_BAD_FIELD_ERROR' && /deleted_at/.test(colErr.message)) {
+        const [projRows] = await pool.query('SELECT id FROM projects WHERE id = ?', [projectId]);
+        projectExists = projRows.length > 0;
+      } else {
+        throw colErr;
+      }
+    }
+    if (!projectExists) return sendError(res, 404, 'Project not found');
+
     let workflows;
     try {
       [workflows] = await pool.query(
-        'SELECT id, project_id, code, name, description, display_order, created_at, updated_at FROM workflows WHERE project_id = ? ORDER BY display_order ASC, id ASC',
+        'SELECT id, project_id, code, name, description, display_order, created_at, updated_at FROM workflows WHERE project_id = ? AND (deleted_at IS NULL) ORDER BY display_order ASC, id ASC',
         [projectId]
       );
     } catch (colErr) {
       if (colErr.code === 'ER_BAD_FIELD_ERROR' && /display_order/.test(colErr.message)) {
         [workflows] = await pool.query(
-          'SELECT id, project_id, code, name, description, created_at, updated_at FROM workflows WHERE project_id = ? ORDER BY id',
+          'SELECT id, project_id, code, name, description, created_at, updated_at FROM workflows WHERE project_id = ? AND (deleted_at IS NULL) ORDER BY id',
+          [projectId]
+        );
+      } else if (colErr.code === 'ER_BAD_FIELD_ERROR' && /deleted_at/.test(colErr.message)) {
+        [workflows] = await pool.query(
+          'SELECT id, project_id, code, name, description, display_order, created_at, updated_at FROM workflows WHERE project_id = ? ORDER BY display_order ASC, id ASC',
           [projectId]
         );
       } else {
@@ -108,7 +198,19 @@ router.post('/projects/:projectId/workflows', async (req, res) => {
     if (!validRoles.includes(sr)) return sendError(res, 400, `Stage ${i + 1}: invalid stage_role (use one of ${validRoles.join(', ')})`);
   }
   try {
-    const [projectRows] = await pool.query('SELECT id FROM projects WHERE id = ?', [projectId]);
+    let projectRows;
+    try {
+      [projectRows] = await pool.query(
+        'SELECT id FROM projects WHERE id = ? AND (deleted_at IS NULL)',
+        [projectId]
+      );
+    } catch (colErr) {
+      if (colErr.code === 'ER_BAD_FIELD_ERROR' && /deleted_at/.test(colErr.message)) {
+        [projectRows] = await pool.query('SELECT id FROM projects WHERE id = ?', [projectId]);
+      } else {
+        throw colErr;
+      }
+    }
     if (!projectRows.length) return sendError(res, 404, 'Project not found');
     const [existing] = await pool.query('SELECT id FROM workflows WHERE project_id = ? AND code = ?', [projectId, code]);
     if (existing.length) return sendError(res, 400, `A workflow with code "${code}" already exists in this project`);
@@ -171,21 +273,50 @@ router.post('/projects/:projectId/workflows', async (req, res) => {
   }
 });
 
-// ----- PATCH /api/projects/:projectId/workflows/:workflowId (update workflow + stages) -----
+// ----- PATCH /api/projects/:projectId/workflows/:workflowId (update workflow + stages; logical delete via deleted: true) -----
 router.patch('/projects/:projectId/workflows/:workflowId', async (req, res) => {
   const projectId = parseInt(req.params.projectId, 10);
   const workflowId = parseInt(req.params.workflowId, 10);
   if (Number.isNaN(projectId) || Number.isNaN(workflowId)) return sendError(res, 400, 'Invalid project or workflow id');
-  const name = (req.body && req.body.name != null) ? String(req.body.name).trim() : null;
-  const description = (req.body && req.body.description != null) ? String(req.body.description).trim() : null;
-  const stages = Array.isArray(req.body.stages) ? req.body.stages : null;
+  const body = req.body || {};
+  const name = (body.name != null) ? String(body.name).trim() : null;
+  const description = (body.description != null) ? String(body.description).trim() : null;
+  const stages = Array.isArray(body.stages) ? body.stages : null;
 
   try {
-    const [wfRows] = await pool.query(
-      'SELECT id, project_id, code, name, description FROM workflows WHERE id = ? AND project_id = ?',
-      [workflowId, projectId]
-    );
+    let wfRows;
+    try {
+      [wfRows] = await pool.query(
+        'SELECT id, project_id, code, name, description, deleted_at FROM workflows WHERE id = ? AND project_id = ?',
+        [workflowId, projectId]
+      );
+    } catch (colErr) {
+      if (colErr.code === 'ER_BAD_FIELD_ERROR' && /deleted_at/.test(colErr.message)) {
+        [wfRows] = await pool.query(
+          'SELECT id, project_id, code, name, description FROM workflows WHERE id = ? AND project_id = ?',
+          [workflowId, projectId]
+        );
+      } else {
+        throw colErr;
+      }
+    }
     if (!wfRows.length) return sendError(res, 404, 'Workflow not found');
+    if (wfRows[0].deleted_at) return sendError(res, 404, 'Workflow not found');
+
+    if (body.deleted === true) {
+      try {
+        await pool.query(
+          'UPDATE workflows SET deleted_at = CURRENT_TIMESTAMP(3), updated_at = CURRENT_TIMESTAMP(3) WHERE id = ? AND project_id = ?',
+          [workflowId, projectId]
+        );
+      } catch (updErr) {
+        if (updErr.code === 'ER_BAD_FIELD_ERROR' && /deleted_at/.test(updErr.message)) {
+          return sendError(res, 501, 'Workflow logical delete not available; run migration 08_workflows_deleted_at.sql');
+        }
+        throw updErr;
+      }
+      return res.json({ ok: true, id: workflowId });
+    }
 
     if (name !== null) {
       await pool.query('UPDATE workflows SET name = ?, updated_at = CURRENT_TIMESTAMP(3) WHERE id = ?', [name, workflowId]);
@@ -274,10 +405,22 @@ router.put('/projects/:projectId/workflows/order', async (req, res) => {
   if (workflowIds.length !== orderedIds.length) return sendError(res, 400, 'Invalid workflow id in orderedWorkflowIds');
   try {
     const placeholders = workflowIds.map(() => '?').join(',');
-    const [rows] = await pool.query(
-      `SELECT id FROM workflows WHERE project_id = ? AND id IN (${placeholders})`,
-      [projectId, ...workflowIds]
-    );
+    let rows;
+    try {
+      [rows] = await pool.query(
+        `SELECT id FROM workflows WHERE project_id = ? AND (deleted_at IS NULL) AND id IN (${placeholders})`,
+        [projectId, ...workflowIds]
+      );
+    } catch (colErr) {
+      if (colErr.code === 'ER_BAD_FIELD_ERROR' && /deleted_at/.test(colErr.message)) {
+        [rows] = await pool.query(
+          `SELECT id FROM workflows WHERE project_id = ? AND id IN (${placeholders})`,
+          [projectId, ...workflowIds]
+        );
+      } else {
+        throw colErr;
+      }
+    }
     if (rows.length !== workflowIds.length) return sendError(res, 400, 'All workflow ids must belong to this project');
     const conn = await pool.getConnection();
     try {
@@ -317,6 +460,23 @@ router.get('/projects/:projectId/stories', async (req, res) => {
   const projectId = parseInt(req.params.projectId, 10);
   if (Number.isNaN(projectId)) return sendError(res, 400, 'Invalid project id');
   try {
+    let projectExists;
+    try {
+      const [projRows] = await pool.query(
+        'SELECT id FROM projects WHERE id = ? AND (deleted_at IS NULL)',
+        [projectId]
+      );
+      projectExists = projRows.length > 0;
+    } catch (colErr) {
+      if (colErr.code === 'ER_BAD_FIELD_ERROR' && /deleted_at/.test(colErr.message)) {
+        const [projRows] = await pool.query('SELECT id FROM projects WHERE id = ?', [projectId]);
+        projectExists = projRows.length > 0;
+      } else {
+        throw colErr;
+      }
+    }
+    if (!projectExists) return sendError(res, 404, 'Project not found');
+
     const [workflows] = await pool.query('SELECT id FROM workflows WHERE project_id = ?', [projectId]);
     const workflowIds = workflows.map((w) => w.id);
     if (workflowIds.length === 0) return res.json([]);
@@ -469,14 +629,35 @@ router.put('/backlog/order', async (req, res) => {
 // ----- GET /api/projects-with-workflows (for backlog "Add to workflow" dropdown: all projects + workflows) -----
 router.get('/projects-with-workflows', async (req, res) => {
   try {
-    const [projects] = await pool.query(
-      'SELECT id, name FROM projects ORDER BY id'
-    );
-    for (const p of projects) {
-      const [workflows] = await pool.query(
-        'SELECT id, name FROM workflows WHERE project_id = ? ORDER BY id',
-        [p.id]
+    let projects;
+    try {
+      [projects] = await pool.query(
+        'SELECT id, name FROM projects WHERE (deleted_at IS NULL) ORDER BY id'
       );
+    } catch (colErr) {
+      if (colErr.code === 'ER_BAD_FIELD_ERROR' && /deleted_at/.test(colErr.message)) {
+        [projects] = await pool.query('SELECT id, name FROM projects ORDER BY id');
+      } else {
+        throw colErr;
+      }
+    }
+    for (const p of projects) {
+      let workflows;
+      try {
+        [workflows] = await pool.query(
+          'SELECT id, name FROM workflows WHERE project_id = ? AND (deleted_at IS NULL) ORDER BY id',
+          [p.id]
+        );
+      } catch (colErr) {
+        if (colErr.code === 'ER_BAD_FIELD_ERROR' && /deleted_at/.test(colErr.message)) {
+          [workflows] = await pool.query(
+            'SELECT id, name FROM workflows WHERE project_id = ? ORDER BY id',
+            [p.id]
+          );
+        } else {
+          throw colErr;
+        }
+      }
       for (const w of workflows) {
         const [stages] = await pool.query(
           'SELECT id FROM workflow_stages WHERE workflow_id = ? ORDER BY stage_order LIMIT 1',

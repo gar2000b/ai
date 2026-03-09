@@ -15,7 +15,7 @@ When implementing, use these as authoritative references:
 | **App requirements** | [markdown/requirements/app/REQUIREMENTS.md](../requirements/app/REQUIREMENTS.md) |
 | **Foundational requirements** | [markdown/requirements/foundational/](../requirements/foundational/) — OPEN-WORKFLOWS-PROJECT.md, USER-STORY.md, USER-STORIES.md |
 | **Database** | [markdown/database/DATABASE.md](../database/DATABASE.md) — connection, credentials, schema and data scripts |
-| **Schema DDL** | `database/schema/` — 01_projects.sql through 06_story_history_audit.sql, plus migrations (02a, 04a, 04c, 04d, 07_stories_deleted_at.sql) |
+| **Schema DDL** | `database/schema/` — 01_projects.sql through 06_story_history_audit.sql, plus migrations (02a, 04a, 04c, 04d, 07_stories_deleted_at.sql, 08_workflows_deleted_at.sql, 09_projects_deleted_at.sql) |
 | **Schema ER diagram** | `database/schema/schema-er.mmd` |
 | **Seed data** | `database/data/` — 01 through 07 (apply in order after schema) |
 
@@ -97,7 +97,7 @@ Exact file names can vary (e.g. `src/` instead of `api/`, or multiple route file
 ## 5. Phase 2 — Database and data readiness
 
 - **Assumption:** Schema and seed data are already applied (as per DATABASE.md). If not:
-  - Apply DDL in order: `database/schema/01_projects.sql` … `06_story_history_audit.sql`, plus migrations as needed (e.g. `02a_workflow_display_order.sql`, `04a`, `04c`, `04d`, `07_stories_deleted_at.sql` — see `database/schema/README.md`).
+  - Apply DDL in order: `database/schema/01_projects.sql` … `06_story_history_audit.sql`, plus migrations as needed (e.g. `02a_workflow_display_order.sql`, `04a`, `04c`, `04d`, `07_stories_deleted_at.sql`, `08_workflows_deleted_at.sql`, `09_projects_deleted_at.sql` — see `database/schema/README.md`).
   - Run seed scripts in order: `database/data/01_project_mep_sentinel.sql` through `07_story_stage_history.sql` (using `scripts/mysql.sh` from `trace_hq/`).
 - The implementation plan does not change the schema; it consumes the existing tables (projects, workflows, workflow_stages, roles, agents, stories, story_dependencies, story_related, story_stage_history, story_audit_log).
 
@@ -110,8 +110,9 @@ All API responses should be JSON. Use consistent error responses (e.g. 4xx/5xx w
 ### 3.1 Projects
 
 - **GET /api/projects**
-  - Return list of projects (id, name, created_at, updated_at) from `projects` table.
+  - Return list of projects (id, name, created_at, updated_at) from `projects` table, excluding logically deleted (e.g. `deleted_at IS NULL`; requires migration **`09_projects_deleted_at.sql`**).
   - Order by id or name as appropriate.
+- **PATCH /api/projects/:projectId** — Body `{ "name": "<new name>" }` updates the project name (trimmed; cannot be empty). Body `{ "deleted": true }` sets `projects.deleted_at` (logical delete). The project is hidden from GET projects and the board when deleted. Returns the updated project (for name update) or `{ ok: true, id: projectId }` (for delete). GET project workflows, GET project stories, and POST project workflows return 404 if the project is deleted. GET projects-with-workflows excludes deleted projects.
 
 ### 3.2 Workflows and stages (per project)
 
@@ -172,10 +173,10 @@ All API responses should be JSON. Use consistent error responses (e.g. 4xx/5xx w
 - **POST /api/projects/:projectId/workflows** — Create a new workflow and its stages. Body: `code` (required, unique per project), `name` (required), `description` (optional), `stages` (array of `{ stage_name, stage_role }`, at least one required; stage_role must be one of the valid role codes). Inserts into `workflows` then `workflow_stages` in order (stage_order 1-based). Returns 201 and the created workflow with its stages.
 - **UI:** On the Workflows page only, a **"Create Workflow"** button (between Create Project and Create Story) and **W** key open the create-workflow modal. The workflow is created for the **currently selected project**; if none is selected, the app prompts to select a project first. Modal: code, name, description; a configurable list of stages (name + stage_role per row; add/remove rows). Create and Cancel buttons. On success, the board refreshes and shows the new workflow section.
 
-### 3.10 Edit workflow
+### 3.10 Edit workflow (and logical delete)
 
-- **PATCH /api/projects/:projectId/workflows/:workflowId** — Update an existing workflow. Body: `name` (optional), `description` (optional), `stages` (optional array of `{ stage_name, stage_role }`; at least one stage required if provided). Code is not updated. If `stages` is provided, existing stages are replaced: new stages are inserted, stories are remapped to new stage positions by order, then old stages are deleted. Returns 200 and the updated workflow with its stages.
-- **UI:** Each workflow section on the project board has an **Edit** link to the right of the workflow name. Clicking it opens the same modal as Create Workflow but in edit mode: title “Edit Workflow”, code field read-only, name/description/stages pre-filled and editable. Save and Cancel buttons; on Save, PATCH the workflow and refresh the board.
+- **PATCH /api/projects/:projectId/workflows/:workflowId** — Update an existing workflow. Body: `name` (optional), `description` (optional), `stages` (optional array of `{ stage_name, stage_role }`; at least one stage required if provided). Code is not updated. If `stages` is provided, existing stages are replaced: new stages are inserted, stories are remapped to new stage positions by order, then old stages are deleted. Returns 200 and the updated workflow with its stages. **Logical delete:** Body `{ "deleted": true }` sets `workflows.deleted_at` to the current timestamp; the workflow is hidden from GET project workflows and the board. Returns `{ ok: true, id: workflowId }`. Requires migration **`08_workflows_deleted_at.sql`**. GET project workflows and GET projects-with-workflows exclude workflows where `deleted_at IS NOT NULL`.
+- **UI:** Each workflow section on the project board has an **Edit** link and a red **Delete** link. Edit opens the same modal as Create Workflow but in edit mode (code read-only; name/description/stages editable). **Delete** opens a confirmation modal; on confirm, PATCH with `{ deleted: true }` and refresh the board.
 
 ### 3.11 Reorder workflows
 
@@ -196,7 +197,7 @@ All API responses should be JSON. Use consistent error responses (e.g. 4xx/5xx w
     - **Workflows** — navigates to the project board (see below).
     - **Settings** — opens settings (theme, etc.).
   - Optional: Home link that shows a simple home view (default view when the app runs).
-  - **Workflows view:** Contains a **board header** (top of the view) with a title on the left and the **project dropdown on the top right** for easy access. The project selector is not in the side menu. The header also includes **"Create Project"** (**P**), **"Create Workflow"** (**W**), and **"Create story"** (**C**) buttons in that order.
+  - **Workflows view:** Contains a **board header** (top of the view) with a title on the left and the **project dropdown on the top right** for easy access. Beside the dropdown, an **Edit** link and a red **Delete** link appear when a project is selected. **Edit** opens a modal (like Create Project) pre-filled with the current project name; the user can change it and save. **Delete** opens a confirmation modal to logically delete the current project. The header also includes **"Create Project"** (**P**), **"Create Workflow"** (**W**), and **"Create story"** (**C**) buttons in that order.
 
 ### 4.2 Client-side “routing”
 
@@ -219,8 +220,8 @@ All API responses should be JSON. Use consistent error responses (e.g. 4xx/5xx w
 
 ### 5.1 One page, stacked workflow sections
 
-- **Board header:** The Workflows view has a header at the top: title (e.g. "Project board") on the left, **project dropdown on the top right**, then **Create Project**, **Create Workflow**, and **Create story** buttons. **Create Workflow** (W) opens a modal to add a workflow (code, name, description, stages) to the selected project. **Create story** opens the same create-story modal as pressing **C**. The dropdown is always visible and easily accessible when viewing the board.
-- **Workflow section header:** Each workflow section shows the workflow name with **up/down** arrow buttons (to reorder workflows), then an **Edit** link. Clicking Edit opens the edit-workflow modal (same form as Create Workflow, with code read-only) so the user can update name, description, and stages and save. The arrow buttons reorder workflows within the project; order is persisted and the board refreshes.
+- **Board header:** The Workflows view has a header at the top: title (e.g. "Project board") on the left, **project dropdown on the top right** with **Edit** and **Delete** links (for the selected project), then **Create Project**, **Create Workflow**, and **Create story** buttons. **Create Workflow** (W) opens a modal to add a workflow (code, name, description, stages) to the selected project. **Create story** opens the same create-story modal as pressing **C**. The dropdown is always visible and easily accessible when viewing the board.
+- **Workflow section header:** Each workflow section shows the workflow name with **up/down** arrow buttons (to reorder workflows), then an **Edit** link and a red **Delete** link. Clicking Edit opens the edit-workflow modal (same form as Create Workflow, with code read-only) so the user can update name, description, and stages and save. Clicking Delete opens a confirmation modal; on confirm, the workflow is logically deleted (hidden from the board). The arrow buttons reorder workflows within the project; order is persisted and the board refreshes.
 - When the user is on “Workflows” and a project is selected:
   - **GET /api/projects/:projectId/workflows** and **GET /api/projects/:projectId/stories** (or a combined endpoint if preferred).
   - Render **one scrollable page** (the project board) that contains **all** workflows for that project, stacked vertically in workflow order (display_order when present, else id). Each workflow is one **workflow section**: a kanban-style block with:
@@ -292,6 +293,8 @@ All API responses should be JSON. Use consistent error responses (e.g. 4xx/5xx w
 - **Create project / create workflow** — Add POST endpoints and UI (project list, “Add workflow” on project) when needed.
 - **Story detail panel** — Side panel or modal with full story fields (description, acceptance criteria, stage history, audit log) fed from existing or new GET story-by-id endpoint.
 - **Restore deleted story** — API and/or UI to set `deleted_at = NULL` (e.g. PATCH with `deleted: false` or admin view of deleted stories).
+- **Restore deleted workflow** — API and/or UI to set `workflows.deleted_at = NULL` so the workflow and its stories reappear on the board.
+- **Restore deleted project** — API and/or UI to set `projects.deleted_at = NULL` so the project and its workflows reappear.
 - **Drag-and-drop** — Replace “Move to” dropdown with DnD for cards between columns; still call the same PATCH API and enforce rules on server.
 - **Login and multi-user** — Replace “current user = owner” with real identity; pass acting agent to move endpoint and enforce owner vs non-owner rules.
 - **Agentic integration** — Keep transition rules and stage_role; integrate with external agents later without changing core model.
