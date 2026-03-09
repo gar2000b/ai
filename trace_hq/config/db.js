@@ -15,6 +15,7 @@ const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
+  connectTimeout: 15000, // 15s for cold MySQL / slow startup
 });
 
 module.exports = { pool };

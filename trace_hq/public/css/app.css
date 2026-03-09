@@ -185,6 +185,10 @@ body {
   box-shadow: 0 0 0 2px var(--border);
 }
 
+.btn-create-project .btn-shortcut {
+  text-decoration: underline;
+}
+
 /* Main content */
 .main-content {
   flex: 1;
