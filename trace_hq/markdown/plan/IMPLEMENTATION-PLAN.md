@@ -160,12 +160,11 @@ All API responses should be JSON. Use consistent error responses (e.g. 4xx/5xx w
 - **POST /api/projects** — Create a new project. Body: `{ "name": "<project name>" }`. Returns 201 and the new project (id, name, created_at, updated_at). The project has no workflows initially.
 - **UI:** On the Workflows page, a **“Create Project”** button appears to the right of the project dropdown; pressing **P** on the Workflows view also opens the same modal. The modal has a single field “Project name” and **Create** / **Cancel** buttons. On Create, the project is created and the board refreshes with the new project selected (empty until workflows are added). Modal closes on Create, Cancel, X, or Escape; does not close when clicking outside. **Whilst any of the create-story (C), edit-story (E), or create-project (P) modals are open, C, E, and P key events are ignored** so users can type those letters in form fields.
 
-### 3.8 Optional: create workflow
+### 3.8 Create workflow
 
-- If time permits:
-  - **POST /api/projects/:projectId/workflows** — create a new workflow (code, name, description) and its stages (e.g. standard pattern: Todo, Planning, In Progress, Review, Done with appropriate stage_role). Then the project board shows one more workflow section.
-
-Can be deferred to a follow-up.
+- **GET /api/roles** — Returns list of roles (id, code) for the stage_role dropdown in the create-workflow modal (owner, dev, unit-test, integration-test, performance-test, devops).
+- **POST /api/projects/:projectId/workflows** — Create a new workflow and its stages. Body: `code` (required, unique per project), `name` (required), `description` (optional), `stages` (array of `{ stage_name, stage_role }`, at least one required; stage_role must be one of the valid role codes). Inserts into `workflows` then `workflow_stages` in order (stage_order 1-based). Returns 201 and the created workflow with its stages.
+- **UI:** On the Workflows page only, a **"Create Workflow"** button (between Create Project and Create Story) and **W** key open the create-workflow modal. The workflow is created for the **currently selected project**; if none is selected, the app prompts to select a project first. Modal: code, name, description; a configurable list of stages (name + stage_role per row; add/remove rows). Create and Cancel buttons. On success, the board refreshes and shows the new workflow section.
 
 ---
 
@@ -179,7 +178,7 @@ Can be deferred to a follow-up.
     - **Workflows** — navigates to the project board (see below).
     - **Settings** — opens settings (theme, etc.).
   - Optional: Home link that shows a simple home view (default view when the app runs).
-  - **Workflows view:** Contains a **board header** (top of the view) with a title on the left and the **project dropdown on the top right** for easy access. The project selector is not in the side menu. The header also includes a **"Create Project"** button (and **P** shortcut) and a **"Create story"** button (same as **C** key) to the right of the Create Project button.
+  - **Workflows view:** Contains a **board header** (top of the view) with a title on the left and the **project dropdown on the top right** for easy access. The project selector is not in the side menu. The header also includes **"Create Project"** (**P**), **"Create Workflow"** (**W**), and **"Create story"** (**C**) buttons in that order.
 
 ### 4.2 Client-side “routing”
 
@@ -202,7 +201,7 @@ Can be deferred to a follow-up.
 
 ### 5.1 One page, stacked workflow sections
 
-- **Board header:** The Workflows view has a header at the top: title (e.g. "Project board") on the left, **project dropdown on the top right**, then **Create Project** and **Create story** buttons. The **Create story** button opens the same create-story modal as pressing **C**. The dropdown is always visible and easily accessible when viewing the board.
+- **Board header:** The Workflows view has a header at the top: title (e.g. "Project board") on the left, **project dropdown on the top right**, then **Create Project**, **Create Workflow**, and **Create story** buttons. **Create Workflow** (W) opens a modal to add a workflow (code, name, description, stages) to the selected project. **Create story** opens the same create-story modal as pressing **C**. The dropdown is always visible and easily accessible when viewing the board.
 - When the user is on “Workflows” and a project is selected:
   - **GET /api/projects/:projectId/workflows** and **GET /api/projects/:projectId/stories** (or a combined endpoint if preferred).
   - Render **one scrollable page** (the project board) that contains **all** workflows for that project, stacked vertically in workflow id order. Each workflow is one **workflow section**: a kanban-style block with:

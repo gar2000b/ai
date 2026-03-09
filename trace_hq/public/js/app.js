@@ -176,6 +176,24 @@ function handleRoute() {
       createBtn.addEventListener('click', () => openCreateProjectModal(refreshWorkflowsView));
     }
 
+    const createWorkflowBtn = document.getElementById('create-workflow-btn');
+    if (createWorkflowBtn && !createWorkflowBtn._createWorkflowAttached) {
+      createWorkflowBtn._createWorkflowAttached = true;
+      createWorkflowBtn.addEventListener('click', () => {
+        const select = document.getElementById('project-select');
+        const opt = select && select.options[select.selectedIndex];
+        const projectId = opt && opt.value ? parseInt(opt.value, 10) : null;
+        const projectName = opt ? opt.text : '';
+        if (!projectId || Number.isNaN(projectId)) {
+          showToast('Select a project first', 'error');
+          return;
+        }
+        if (window.TraceHqWorkflowCreateModal && typeof window.TraceHqWorkflowCreateModal.openCreateWorkflowModal === 'function') {
+          window.TraceHqWorkflowCreateModal.openCreateWorkflowModal(projectId, projectName, refreshWorkflowsView);
+        }
+      });
+    }
+
     const createStoryBtn = document.getElementById('create-story-btn');
     if (createStoryBtn && !createStoryBtn._createStoryAttached) {
       createStoryBtn._createStoryAttached = true;
@@ -204,6 +222,7 @@ function escapeHtml(s) {
 
 function isAnyModalOpen() {
   return document.getElementById('create-project-overlay') ||
+    document.getElementById('create-workflow-overlay') ||
     document.getElementById('story-create-overlay') ||
     document.getElementById('story-edit-overlay');
 }
@@ -211,6 +230,7 @@ function isAnyModalOpen() {
 function isTargetInsideModal(target) {
   return target && (
     target.closest('#create-project-overlay') ||
+    target.closest('#create-workflow-overlay') ||
     target.closest('#story-create-overlay') ||
     target.closest('#story-edit-overlay')
   );
@@ -255,5 +275,27 @@ document.addEventListener('keydown', function handleCreateProjectKey(e) {
   e.preventDefault();
   if (typeof window.__traceHqRefreshWorkflows === 'function') {
     openCreateProjectModal(window.__traceHqRefreshWorkflows);
+  }
+}, true);
+
+document.addEventListener('keydown', function handleCreateWorkflowKey(e) {
+  if (e.key !== 'w' && e.key !== 'W') return;
+  if (e.ctrlKey || e.metaKey) return;
+  if (isAnyModalOpen() || isTargetInsideModal(e.target)) return;
+  const hash = (window.location.hash || '#/').slice(1) || '/';
+  const path = hash.startsWith('/') ? hash : '/' + hash;
+  const route = path === '/' ? 'home' : path.slice(1).split('/')[0];
+  if (route !== 'workflows') return;
+  e.preventDefault();
+  const select = document.getElementById('project-select');
+  const opt = select && select.options[select.selectedIndex];
+  const projectId = opt && opt.value ? parseInt(opt.value, 10) : null;
+  const projectName = opt ? opt.text : '';
+  if (!projectId || Number.isNaN(projectId)) {
+    showToast('Select a project first', 'error');
+    return;
+  }
+  if (window.TraceHqWorkflowCreateModal && typeof window.TraceHqWorkflowCreateModal.openCreateWorkflowModal === 'function') {
+    window.TraceHqWorkflowCreateModal.openCreateWorkflowModal(projectId, projectName, window.__traceHqRefreshWorkflows);
   }
 }, true);

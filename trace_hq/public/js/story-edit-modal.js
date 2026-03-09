@@ -31,13 +31,15 @@ function closeModal() {
 }
 
 function openEditModal(storyId, onSaved) {
+  const existing = document.getElementById('story-edit-overlay');
+  if (existing) existing.remove();
   const root = getModalContainer();
   root.innerHTML = '<div id="story-edit-overlay" class="modal-overlay"><div class="modal-content modal-content--story-edit"><p class="modal-loading">Loading story…</p></div></div>';
-  const overlay = document.getElementById('story-edit-overlay');
+  const overlay = root.querySelector('#story-edit-overlay');
 
   document.addEventListener('keydown', function onEscape(e) {
-    if (e.key === 'Escape' && document.getElementById('story-edit-overlay')) {
-      closeModal();
+    if (e.key === 'Escape' && overlay.parentNode) {
+      overlay.remove();
       document.removeEventListener('keydown', onEscape);
     }
   });
@@ -52,7 +54,7 @@ function openEditModal(storyId, onSaved) {
     .catch((err) => {
       const content = overlay.querySelector('.modal-content');
       content.innerHTML = '<p class="board-error">' + escapeHtml(err.message) + '</p><button type="button" class="modal-btn modal-btn--secondary" data-action="cancel">Close</button>';
-      content.querySelector('[data-action="cancel"]').addEventListener('click', closeModal);
+      content.querySelector('[data-action="cancel"]').addEventListener('click', () => overlay.remove());
     });
 }
 
@@ -182,7 +184,7 @@ function renderModalForm(overlay, story, agents, storyId, onSaved) {
     </form>
   `;
 
-  content.querySelectorAll('[data-action="cancel"]').forEach((btn) => btn.addEventListener('click', closeModal));
+  content.querySelectorAll('[data-action="cancel"]').forEach((btn) => btn.addEventListener('click', () => overlay.remove()));
 
   content.querySelector('#story-edit-form').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -233,7 +235,7 @@ function renderModalForm(overlay, story, agents, storyId, onSaved) {
         throw new Error(data.error || res.statusText);
       }
       if (typeof window.showToast === 'function') window.showToast('Story saved', 'success');
-      closeModal();
+      overlay.remove();
       if (typeof onSaved === 'function') onSaved();
     } catch (err) {
       if (typeof window.showToast === 'function') window.showToast(err.message, 'error');
@@ -251,8 +253,8 @@ function getSelectedStoryId() {
 function initEditStoryOnKeyE() {
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'e' && e.key !== 'E') return;
-    if (document.getElementById('create-project-overlay') || document.getElementById('story-create-overlay') || document.getElementById('story-edit-overlay')) return;
-    if (e.target && (e.target.closest('#create-project-overlay') || e.target.closest('#story-create-overlay') || e.target.closest('#story-edit-overlay'))) return;
+    if (document.getElementById('create-project-overlay') || document.getElementById('create-workflow-overlay') || document.getElementById('story-create-overlay') || document.getElementById('story-edit-overlay')) return;
+    if (e.target && (e.target.closest('#create-project-overlay') || e.target.closest('#create-workflow-overlay') || e.target.closest('#story-create-overlay') || e.target.closest('#story-edit-overlay'))) return;
     const storyId = getSelectedStoryId();
     if (!storyId) return;
     e.preventDefault();

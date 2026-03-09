@@ -14,7 +14,7 @@ The **Workflows** section is a multi-agent kanban-style system. Multiple agents 
 - **Backlog** = global list of stories not yet in any workflow (not tied to a project). Stories can be moved from the backlog onto **any project’s workflow** via “Add to workflow” (dropdown grouped by project). Backlog order is **reordered by drag-and-drop** and persisted.
 - **User stories** = units of work with a stable identity. A story is either in a workflow (on a project board; then it belongs to that project) or in the global backlog (no project). Stories in a workflow carry execution state: current stage, assignee, dependencies, blocking, branch/PR/artifact tracking, and an audit trail.
 - **Agents** = role-based workers who move stories forward one stage at a time. The **owner** is the governance authority and can move any story to any stage.
-- **Keyboard:** From Workflows or Backlog, **C** opens the create-story modal (placement: Backlog or any workflow). With a story card selected, **E** opens the edit-story modal. On Workflows, **P** opens the create-project modal. Whilst any of these modals is open, **C**, **E**, and **P** are ignored so you can type those letters in form fields.
+- **Keyboard:** From Workflows or Backlog, **C** opens the create-story modal (placement: Backlog or any workflow). With a story card selected, **E** opens the edit-story modal. On Workflows, **P** opens the create-project modal and **W** opens the create-workflow modal. Whilst any of these modals is open, **C**, **E**, **P**, and **W** are ignored so you can type those letters in form fields.
 
 ---
 

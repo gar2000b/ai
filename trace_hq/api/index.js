@@ -77,6 +77,59 @@ router.get('/projects/:projectId/workflows', async (req, res) => {
   }
 });
 
+// ----- POST /api/projects/:projectId/workflows (create workflow + stages) -----
+router.post('/projects/:projectId/workflows', async (req, res) => {
+  const projectId = parseInt(req.params.projectId, 10);
+  if (Number.isNaN(projectId)) return sendError(res, 400, 'Invalid project id');
+  const code = (req.body && req.body.code && String(req.body.code).trim()) || null;
+  const name = (req.body && req.body.name && String(req.body.name).trim()) || null;
+  const description = (req.body && req.body.description != null) ? String(req.body.description).trim() : null;
+  const stages = Array.isArray(req.body.stages) ? req.body.stages : [];
+  if (!code || !name) return sendError(res, 400, 'Workflow code and name are required');
+  if (stages.length === 0) return sendError(res, 400, 'At least one stage is required');
+  const validRoles = ['owner', 'dev', 'unit-test', 'integration-test', 'performance-test', 'devops'];
+  for (let i = 0; i < stages.length; i++) {
+    const s = stages[i];
+    const sn = (s && s.stage_name != null) ? String(s.stage_name).trim() : '';
+    const sr = (s && s.stage_role != null) ? String(s.stage_role) : '';
+    if (!sn) return sendError(res, 400, `Stage ${i + 1}: stage name is required`);
+    if (!validRoles.includes(sr)) return sendError(res, 400, `Stage ${i + 1}: invalid stage_role (use one of ${validRoles.join(', ')})`);
+  }
+  try {
+    const [projectRows] = await pool.query('SELECT id FROM projects WHERE id = ?', [projectId]);
+    if (!projectRows.length) return sendError(res, 404, 'Project not found');
+    const [existing] = await pool.query('SELECT id FROM workflows WHERE project_id = ? AND code = ?', [projectId, code]);
+    if (existing.length) return sendError(res, 400, `A workflow with code "${code}" already exists in this project`);
+    const [insertResult] = await pool.query(
+      'INSERT INTO workflows (project_id, code, name, description) VALUES (?, ?, ?, ?)',
+      [projectId, code, name, description || null]
+    );
+    const workflowId = insertResult.insertId;
+    for (let i = 0; i < stages.length; i++) {
+      const s = stages[i];
+      const stageName = String(s.stage_name).trim();
+      const stageRole = String(s.stage_role);
+      await pool.query(
+        'INSERT INTO workflow_stages (workflow_id, stage_order, stage_name, stage_role) VALUES (?, ?, ?, ?)',
+        [workflowId, i + 1, stageName, stageRole]
+      );
+    }
+    const [workflows] = await pool.query(
+      'SELECT id, project_id, code, name, description, created_at, updated_at FROM workflows WHERE id = ?',
+      [workflowId]
+    );
+    const [stageRows] = await pool.query(
+      'SELECT id, workflow_id, stage_order, stage_name, stage_role, created_at FROM workflow_stages WHERE workflow_id = ? ORDER BY stage_order',
+      [workflowId]
+    );
+    const created = workflows[0];
+    created.stages = stageRows;
+    res.status(201).json(created);
+  } catch (err) {
+    sendError(res, 500, err.message || 'Failed to create workflow');
+  }
+});
+
 // ----- GET /api/projects/:projectId/stories -----
 router.get('/projects/:projectId/stories', async (req, res) => {
   const projectId = parseInt(req.params.projectId, 10);
@@ -256,6 +309,16 @@ router.get('/projects-with-workflows', async (req, res) => {
     sendError(res, 500, err.message || 'Failed to fetch projects with workflows');
   }
 });
+// ----- GET /api/roles (for workflow stage_role dropdown) -----
+router.get('/roles', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT id, code FROM roles ORDER BY id');
+    res.json(rows);
+  } catch (err) {
+    sendError(res, 500, err.message || 'Failed to fetch roles');
+  }
+});
+
 // ----- GET /api/agents -----
 router.get('/agents', async (req, res) => {
   try {
