@@ -255,6 +255,7 @@ function handleRoute() {
 
   if (route === 'home') {
     showView('view-home');
+    renderDashboard();
     return;
   }
 
@@ -411,6 +412,223 @@ function escapeHtml(s) {
   const el = document.createElement('span');
   el.textContent = s;
   return el.innerHTML;
+}
+
+function formatRelativeTime(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now - d;
+  const diffSec = Math.floor(diffMs / 1000);
+  if (diffSec < 60) return 'just now';
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return diffMin + 'm ago';
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return diffHr + 'h ago';
+  const diffDay = Math.floor(diffHr / 24);
+  if (diffDay < 30) return diffDay + 'd ago';
+  return d.toLocaleDateString();
+}
+
+function renderDashboard() {
+  const container = document.getElementById('home-dashboard');
+  if (!container) return;
+  container.innerHTML = '<p class="home-loading">Loading dashboard&hellip;</p>';
+
+  fetch('/api/dashboard')
+    .then(function (res) {
+      if (!res.ok) throw new Error('Failed to load dashboard');
+      return res.json();
+    })
+    .then(function (data) {
+      var html = '';
+
+      // Quick links
+      html += '<div class="dash-quick-links">';
+      html += '<a href="#/workflows" class="dash-quick-link">Open Workflows</a>';
+      html += '<a href="#/backlog" class="dash-quick-link">Open Backlog</a>';
+      html += '<a href="#/settings" class="dash-quick-link">Settings</a>';
+      html += '</div>';
+
+      // Top stat cards
+      html += '<div class="dash-stats">';
+      html += '<div class="dash-stat-card dash-stat-card--clickable" data-link="#/workflows">';
+      html += '<span class="dash-stat-value">' + data.projects.count + '</span>';
+      html += '<span class="dash-stat-label">Projects</span>';
+      html += '</div>';
+      html += '<div class="dash-stat-card">';
+      html += '<span class="dash-stat-value">' + data.workflows.count + '</span>';
+      html += '<span class="dash-stat-label">Workflows</span>';
+      html += '</div>';
+      html += '<div class="dash-stat-card">';
+      html += '<span class="dash-stat-value">' + data.stories.total + '</span>';
+      html += '<span class="dash-stat-label">Total Stories</span>';
+      html += '</div>';
+      html += '<div class="dash-stat-card">';
+      html += '<span class="dash-stat-value">' + data.stories.inWorkflow + '</span>';
+      html += '<span class="dash-stat-label">In Workflow</span>';
+      html += '</div>';
+      html += '<div class="dash-stat-card dash-stat-card--clickable" data-link="#/backlog">';
+      html += '<span class="dash-stat-value">' + data.stories.backlog + '</span>';
+      html += '<span class="dash-stat-label">Backlog</span>';
+      html += '</div>';
+      if (data.stories.blocked > 0) {
+        html += '<div class="dash-stat-card dash-stat-card--blocked">';
+        html += '<span class="dash-stat-value">' + data.stories.blocked + '</span>';
+        html += '<span class="dash-stat-label">Blocked</span>';
+        html += '</div>';
+      }
+      html += '<div class="dash-stat-card">';
+      html += '<span class="dash-stat-value">' + data.agents.count + '</span>';
+      html += '<span class="dash-stat-label">Agents</span>';
+      html += '</div>';
+      html += '</div>';
+
+      // Sections row
+      html += '<div class="dash-sections">';
+
+      // Stories by stage
+      html += '<div class="dash-section">';
+      html += '<h3 class="dash-section-title">Stories by Stage</h3>';
+      if (data.stories.byStage && data.stories.byStage.length) {
+        var maxStage = Math.max.apply(null, data.stories.byStage.map(function (s) { return s.cnt; }));
+        html += '<ul class="dash-bar-list">';
+        data.stories.byStage.forEach(function (s) {
+          var pct = maxStage > 0 ? Math.round((s.cnt / maxStage) * 100) : 0;
+          html += '<li class="dash-bar-item">';
+          html += '<span class="dash-bar-label">' + escapeHtml(s.stage) + '</span>';
+          html += '<span class="dash-bar-track"><span class="dash-bar-fill" style="width:' + pct + '%"></span></span>';
+          html += '<span class="dash-bar-count">' + s.cnt + '</span>';
+          html += '</li>';
+        });
+        html += '</ul>';
+      } else {
+        html += '<p class="dash-empty">No stories yet.</p>';
+      }
+      html += '</div>';
+
+      // Stories by priority
+      html += '<div class="dash-section">';
+      html += '<h3 class="dash-section-title">Stories by Priority</h3>';
+      if (data.stories.byPriority && data.stories.byPriority.length) {
+        var maxPrio = Math.max.apply(null, data.stories.byPriority.map(function (s) { return s.cnt; }));
+        html += '<ul class="dash-bar-list">';
+        data.stories.byPriority.forEach(function (s) {
+          var pct = maxPrio > 0 ? Math.round((s.cnt / maxPrio) * 100) : 0;
+          var cls = 'dash-bar-fill dash-bar-fill--' + s.priority;
+          html += '<li class="dash-bar-item">';
+          html += '<span class="dash-bar-label">' + escapeHtml(s.priority) + '</span>';
+          html += '<span class="dash-bar-track"><span class="' + cls + '" style="width:' + pct + '%"></span></span>';
+          html += '<span class="dash-bar-count">' + s.cnt + '</span>';
+          html += '</li>';
+        });
+        html += '</ul>';
+      } else {
+        html += '<p class="dash-empty">No stories yet.</p>';
+      }
+      html += '</div>';
+
+      // Stories by type
+      html += '<div class="dash-section">';
+      html += '<h3 class="dash-section-title">Stories by Type</h3>';
+      if (data.stories.byType && data.stories.byType.length) {
+        var maxType = Math.max.apply(null, data.stories.byType.map(function (s) { return s.cnt; }));
+        html += '<ul class="dash-bar-list">';
+        data.stories.byType.forEach(function (s) {
+          var pct = maxType > 0 ? Math.round((s.cnt / maxType) * 100) : 0;
+          html += '<li class="dash-bar-item">';
+          html += '<span class="dash-bar-label">' + escapeHtml(s.type) + '</span>';
+          html += '<span class="dash-bar-track"><span class="dash-bar-fill" style="width:' + pct + '%"></span></span>';
+          html += '<span class="dash-bar-count">' + s.cnt + '</span>';
+          html += '</li>';
+        });
+        html += '</ul>';
+      } else {
+        html += '<p class="dash-empty">No stories yet.</p>';
+      }
+      html += '</div>';
+
+      // Projects
+      html += '<div class="dash-section">';
+      html += '<h3 class="dash-section-title">Projects</h3>';
+      if (data.projects.list && data.projects.list.length) {
+        html += '<ul class="dash-project-list">';
+        data.projects.list.forEach(function (p) {
+          html += '<li class="dash-project-item" data-project-id="' + p.id + '">';
+          html += '<span class="dash-project-dot"></span>';
+          html += escapeHtml(p.name);
+          html += '</li>';
+        });
+        html += '</ul>';
+      } else {
+        html += '<p class="dash-empty">No projects yet. <a href="#/workflows">Create one</a>.</p>';
+      }
+      html += '</div>';
+
+      // Agents
+      html += '<div class="dash-section">';
+      html += '<h3 class="dash-section-title">Agent Roster</h3>';
+      if (data.agents.list && data.agents.list.length) {
+        html += '<div class="dash-agents-grid">';
+        data.agents.list.forEach(function (a) {
+          var initials = a.name.split('-').map(function (w) { return w.charAt(0); }).join('').toUpperCase().slice(0, 2);
+          html += '<div class="dash-agent-chip">';
+          html += '<span class="dash-agent-avatar">' + escapeHtml(initials) + '</span>';
+          html += '<span class="dash-agent-info">';
+          html += '<span class="dash-agent-name">' + escapeHtml(a.name) + '</span>';
+          html += '<span class="dash-agent-role">' + escapeHtml(a.role_code) + '</span>';
+          html += '</span></div>';
+        });
+        html += '</div>';
+      } else {
+        html += '<p class="dash-empty">No agents configured.</p>';
+      }
+      html += '</div>';
+
+      // Recent activity
+      html += '<div class="dash-section">';
+      html += '<h3 class="dash-section-title">Recent Activity</h3>';
+      if (data.recentActivity && data.recentActivity.length) {
+        html += '<ul class="dash-activity-list">';
+        data.recentActivity.forEach(function (a) {
+          html += '<li class="dash-activity-item">';
+          html += '<span class="dash-activity-badge">' + escapeHtml(a.event_type.replace(/_/g, ' ')) + '</span>';
+          html += '<span class="dash-activity-text"><strong>' + escapeHtml(a.story_id) + '</strong> ' + escapeHtml(a.note || '') + '</span>';
+          html += '<span class="dash-activity-time">' + formatRelativeTime(a.created_at) + '</span>';
+          html += '</li>';
+        });
+        html += '</ul>';
+      } else {
+        html += '<p class="dash-empty">No recent activity.</p>';
+      }
+      html += '</div>';
+
+      html += '</div>'; // close dash-sections
+
+      container.innerHTML = html;
+
+      // Attach click handlers for stat cards that link somewhere
+      container.querySelectorAll('.dash-stat-card--clickable').forEach(function (card) {
+        card.addEventListener('click', function () {
+          var link = card.getAttribute('data-link');
+          if (link) window.location.hash = link;
+        });
+      });
+
+      // Attach click to projects to navigate to workflows for that project
+      container.querySelectorAll('.dash-project-item').forEach(function (item) {
+        item.addEventListener('click', function () {
+          var pid = item.getAttribute('data-project-id');
+          if (pid && window.TraceHqBoard) {
+            window.TraceHqBoard.setLastProjectId(parseInt(pid, 10));
+          }
+          window.location.hash = '#/workflows';
+        });
+      });
+    })
+    .catch(function (err) {
+      container.innerHTML = '<p class="board-error">' + escapeHtml(err.message) + '</p>';
+    });
 }
 
 function isAnyModalOpen() {
