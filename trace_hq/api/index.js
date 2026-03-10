@@ -1198,4 +1198,123 @@ router.patch('/stories/:storyId/workflow', async (req, res) => {
   }
 });
 
+// ----- GET /api/dashboard (summary stats for the Home view) -----
+router.get('/dashboard', async (req, res) => {
+  try {
+    let projects;
+    try {
+      [projects] = await pool.query(
+        'SELECT id, name FROM projects WHERE (deleted_at IS NULL) ORDER BY id'
+      );
+    } catch (colErr) {
+      if (colErr.code === 'ER_BAD_FIELD_ERROR' && /deleted_at/.test(colErr.message)) {
+        [projects] = await pool.query('SELECT id, name FROM projects ORDER BY id');
+      } else { throw colErr; }
+    }
+
+    let totalWorkflows = 0;
+    try {
+      const [wfCount] = await pool.query(
+        'SELECT COUNT(*) AS cnt FROM workflows WHERE (deleted_at IS NULL)'
+      );
+      totalWorkflows = wfCount[0].cnt;
+    } catch (colErr) {
+      if (colErr.code === 'ER_BAD_FIELD_ERROR' && /deleted_at/.test(colErr.message)) {
+        const [wfCount] = await pool.query('SELECT COUNT(*) AS cnt FROM workflows');
+        totalWorkflows = wfCount[0].cnt;
+      } else { throw colErr; }
+    }
+
+    let totalStories = 0;
+    let blockedStories = 0;
+    let backlogCount = 0;
+    let storiesByType = [];
+    let storiesByPriority = [];
+    let storiesByStage = [];
+    try {
+      const [sc] = await pool.query(
+        'SELECT COUNT(*) AS cnt FROM stories WHERE (deleted_at IS NULL)'
+      );
+      totalStories = sc[0].cnt;
+
+      const [bc] = await pool.query(
+        'SELECT COUNT(*) AS cnt FROM stories WHERE blocked = 1 AND (deleted_at IS NULL)'
+      );
+      blockedStories = bc[0].cnt;
+
+      const [blc] = await pool.query(
+        'SELECT COUNT(*) AS cnt FROM stories WHERE workflow_id IS NULL AND (deleted_at IS NULL)'
+      );
+      backlogCount = blc[0].cnt;
+
+      [storiesByType] = await pool.query(
+        'SELECT type, COUNT(*) AS cnt FROM stories WHERE (deleted_at IS NULL) GROUP BY type ORDER BY cnt DESC'
+      );
+      [storiesByPriority] = await pool.query(
+        'SELECT priority, COUNT(*) AS cnt FROM stories WHERE (deleted_at IS NULL) GROUP BY priority ORDER BY FIELD(priority, "critical", "high", "medium", "low")'
+      );
+      [storiesByStage] = await pool.query(
+        `SELECT COALESCE(ws.stage_name, 'Backlog') AS stage, COUNT(*) AS cnt
+         FROM stories s LEFT JOIN workflow_stages ws ON s.workflow_stage_id = ws.id
+         WHERE (s.deleted_at IS NULL) GROUP BY stage ORDER BY cnt DESC`
+      );
+    } catch (colErr) {
+      if (colErr.code === 'ER_BAD_FIELD_ERROR' && /deleted_at/.test(colErr.message)) {
+        const [sc] = await pool.query('SELECT COUNT(*) AS cnt FROM stories');
+        totalStories = sc[0].cnt;
+        const [bc] = await pool.query('SELECT COUNT(*) AS cnt FROM stories WHERE blocked = 1');
+        blockedStories = bc[0].cnt;
+        const [blc] = await pool.query('SELECT COUNT(*) AS cnt FROM stories WHERE workflow_id IS NULL');
+        backlogCount = blc[0].cnt;
+        [storiesByType] = await pool.query('SELECT type, COUNT(*) AS cnt FROM stories GROUP BY type ORDER BY cnt DESC');
+        [storiesByPriority] = await pool.query(
+          'SELECT priority, COUNT(*) AS cnt FROM stories GROUP BY priority ORDER BY FIELD(priority, "critical", "high", "medium", "low")'
+        );
+        [storiesByStage] = await pool.query(
+          `SELECT COALESCE(ws.stage_name, 'Backlog') AS stage, COUNT(*) AS cnt
+           FROM stories s LEFT JOIN workflow_stages ws ON s.workflow_stage_id = ws.id GROUP BY stage ORDER BY cnt DESC`
+        );
+      } else { throw colErr; }
+    }
+
+    let recentActivity = [];
+    try {
+      [recentActivity] = await pool.query(
+        `SELECT sal.story_id, sal.event_type, sal.note, sal.created_at
+         FROM story_audit_log sal
+         JOIN stories s ON sal.story_id = s.id AND (s.deleted_at IS NULL)
+         ORDER BY sal.created_at DESC LIMIT 10`
+      );
+    } catch (colErr) {
+      if (colErr.code === 'ER_BAD_FIELD_ERROR' && /deleted_at/.test(colErr.message)) {
+        [recentActivity] = await pool.query(
+          'SELECT story_id, event_type, note, created_at FROM story_audit_log ORDER BY created_at DESC LIMIT 10'
+        );
+      } else { throw colErr; }
+    }
+
+    const [agents] = await pool.query(
+      'SELECT a.id, a.name, r.code AS role_code FROM agents a JOIN roles r ON a.role_id = r.id ORDER BY a.id'
+    );
+
+    res.json({
+      projects: { count: projects.length, list: projects.map(p => ({ id: p.id, name: p.name })) },
+      workflows: { count: totalWorkflows },
+      stories: {
+        total: totalStories,
+        blocked: blockedStories,
+        backlog: backlogCount,
+        inWorkflow: totalStories - backlogCount,
+        byType: storiesByType,
+        byPriority: storiesByPriority,
+        byStage: storiesByStage
+      },
+      agents: { count: agents.length, list: agents },
+      recentActivity
+    });
+  } catch (err) {
+    sendError(res, 500, err.message || 'Failed to fetch dashboard');
+  }
+});
+
 module.exports = router;
