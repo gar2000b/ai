@@ -596,6 +596,10 @@ Enter:
 
 **Mac/Linux**:
 ```bash
+# Run these first if using git bash
+dos2unix .env
+export $(cat .env | grep -v '^#' | xargs)
+
 # 1. Authenticate Docker to ECR (using your .env values!)
 aws ecr get-login-password --region $DEFAULT_AWS_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$DEFAULT_AWS_REGION.amazonaws.com
 

@@ -6,7 +6,7 @@ from fastapi_clerk_auth import ClerkConfig, ClerkHTTPBearer, HTTPAuthorizationCr
 from openai import OpenAI  # type: ignore
 
 app = FastAPI()
-clerk_config = ClerkConfig(jwks_url=os.getenv("CLERK_JWKS_URL"))
+clerk_config = ClerkConfig(jwks_url=(os.getenv("CLERK_JWKS_URL") or "").strip())
 clerk_guard = ClerkHTTPBearer(clerk_config)
 
 
@@ -40,7 +40,8 @@ def consultation_summary(
     creds: HTTPAuthorizationCredentials = Depends(clerk_guard),
 ):
     user_id = creds.decoded["sub"]  # Available for tracking/auditing
-    client = OpenAI()
+    api_key = (os.getenv("OPENAI_API_KEY") or "").strip()
+    client = OpenAI(api_key=api_key)
 
     user_prompt = user_prompt_for(visit)
 

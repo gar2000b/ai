@@ -26,9 +26,9 @@ function ConsultationForm() {
         setOutput('');
         setLoading(true);
 
-        const jwt = await getToken();
+        const jwt = await getToken({ skipCache: true });
         if (!jwt) {
-            setOutput('Authentication required');
+            setOutput('Authentication required. Please sign in again.');
             setLoading(false);
             return;
         }
@@ -36,7 +36,7 @@ function ConsultationForm() {
         const controller = new AbortController();
         let buffer = '';
 
-        await fetchEventSource('/api', {
+        await fetchEventSource('/api/consultation', {
             signal: controller.signal,
             method: 'POST',
             headers: {
@@ -48,12 +48,22 @@ function ConsultationForm() {
                 date_of_visit: visitDate?.toISOString().slice(0, 10),
                 notes,
             }),
+            async onopen(response) {
+                if (response.status === 401) {
+                    setOutput('Session expired. Please sign out and sign in again.');
+                    controller.abort();
+                    throw new Error('Unauthorized');
+                }
+                if (!response.ok) {
+                    throw new Error(`Request failed: ${response.status}`);
+                }
+            },
             onmessage(ev) {
                 buffer += ev.data;
                 setOutput(buffer);
             },
-            onclose() { 
-                setLoading(false); 
+            onclose() {
+                setLoading(false);
             },
             onerror(err) {
                 console.error('SSE error:', err);
