@@ -1,0 +1,9 @@
+npm install lucide-react
+uv init --bare
+uv python pin 3.12
+uv add -r requirements.txt
+uv run uvicorn server:app --reload
+uv add -r requirements.txt
+uv run uvicorn server:app --reload
+npm run build
+aws s3 sync out/ s3://YOUR-FRONTEND-BUCKET-NAME/ --delete

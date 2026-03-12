@@ -1,0 +1,34 @@
+IaaS (least abstract, most control)
+  - AWS EC2
+  - Azure VMs
+  - Google Compute Engine
+  - (You manage OS, runtime, scaling, etc.)
+
+        ↓
+
+CaaS / Container Orchestration
+  - Kubernetes (EKS, GKE, AKS, OpenShift)
+  - Amazon ECS
+  - Nomad
+  - (You manage containers, services, scaling, networking)
+
+  - Docker (tooling/runtime, sits here as the *enabler*, not the platform)
+    *Docker is not a service layer, but the container tech used by CaaS*
+
+        ↓
+
+PaaS (Application Platform)
+  - AWS App Runner
+  - Heroku
+  - Google App Engine
+  - Azure App Service
+  - (You deploy an app or image; platform handles infra, scaling, routing)
+
+        ↓
+
+FaaS / Serverless (most abstract)
+  - AWS Lambda
+  - Azure Functions
+  - Google Cloud Functions
+  - Cloudflare Workers
+  - (You deploy functions; platform runs and scales them per event)

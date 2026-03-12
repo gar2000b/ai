@@ -1,0 +1,17 @@
+docker --version
+docker run hello-world
+export $(cat .env | grep -v '^#' | xargs)
+docker build \
+  --build-arg NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY" \
+  -t consultation-app .
+docker run -p 8000:8000 \
+  -e CLERK_SECRET_KEY="$CLERK_SECRET_KEY" \
+  -e CLERK_JWKS_URL="$CLERK_JWKS_URL" \
+  -e OPENAI_API_KEY="$OPENAI_API_KEY" \
+  consultation-app
+aws configure
+dos2unix .env
+aws ecr get-login-password --region $DEFAULT_AWS_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$DEFAULT_AWS_REGION.amazonaws.com
+docker build   --platform linux/amd64   --build-arg NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"   -t consultation-app .
+docker tag consultation-app:latest $AWS_ACCOUNT_ID.dkr.ecr.$DEFAULT_AWS_REGION.amazonaws.com/consultation-app:latest
+docker push $AWS_ACCOUNT_ID.dkr.ecr.$DEFAULT_AWS_REGION.amazonaws.com/consultation-app:latest
