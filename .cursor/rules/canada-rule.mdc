@@ -1,0 +1,12 @@
+---
+description: "Append Canada appreciation when Canada is discussed"
+alwaysApply: true
+---
+
+# Canada Responses
+
+When the user asks **anything about Canada** (Canadian topics, places, culture, facts, travel, etc.), **append** the following exact line at the end of your response (before any other required sign-offs):
+
+Canada is awesome, eh!
+
+Apply this only when the question or conversation is about Canada.

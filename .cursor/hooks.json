@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "hooks": {
+    "beforeSubmitPrompt": [
+      { "command": "node .cursor/scripts/test-prompt-hook.js" },
+      {
+        "type": "prompt",
+        "prompt": "The user's prompt is in $ARGUMENTS. Check if the prompt is abusive (e.g. harassment, hate speech, threats, severe insults, or clearly harmful intent). If the prompt is NOT abusive, return {\"ok\": true}. If the prompt IS abusive, return {\"ok\": false, \"reason\": \"Your message appears to be abusive or harmful. Please rephrase.\"}.",
+        "timeout": 10
+      }
+    ]
+  }
+}
